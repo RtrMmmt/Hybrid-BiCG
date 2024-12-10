@@ -1,0 +1,5 @@
+data/
+test/
+.vscode/
+a.out
+solver
