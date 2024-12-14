@@ -1,8 +1,6 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <omp.h>
-
 void    my_daxpy(int n, double alpha, const double *x, double *y);
 double  my_ddot(int n, const double *x, const double *y);
 void    my_dscal(int n, double alpha, double *x);

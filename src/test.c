@@ -1,3 +1,5 @@
+// mpicc -O3 src/test.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -fopenmp -L/usr/local/Cellar/libomp/19.1.5/lib -lomp
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +8,8 @@
 
 #include "vector.h"
 #include "matrix.h"
+#include "openmp_matrix.h"
+#include "openmp_vector.h"
 
 #define DISPLAY_NODE_INFO   /* ノード数とプロセス数の表示 */
 
@@ -109,9 +113,58 @@ int main(int argc, char *argv[]) {
         r_loc[i] = 1; /* 初期残差はすべて2 */
     }
 
+    double local_sum = 0.0;
+    double openmp_norm = 0.0;
+
+    start_time = MPI_Wtime();
+
+#pragma omp parallel
+{
+    for (int i = 0; i < 100; i++) {
+        openmp_norm = 0.0;
+        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
+        local_sum = my_openmp_ddot(vec_loc_size, r_loc, r_loc);
+        #pragma omp atomic
+        openmp_norm += local_sum;
+        #pragma omp barrier
+        #pragma omp master
+        MPI_Allreduce(MPI_IN_PLACE, &openmp_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        #pragma omp barrier
+    }
+}
+
+    end_time  = MPI_Wtime();
+
+    if (myid == 0) {
+        printf("OpenMP time: %e [sec.]\n", end_time - start_time);
+    }
+
+    double norm = 0.0;
+
+    start_time = MPI_Wtime();
+
+    for (int i = 0; i < 100; i++) {
+        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
+        norm = my_ddot(vec_loc_size, r_loc, r_loc);
+        MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+
+    end_time  = MPI_Wtime();
+
+    if (myid == 0) {
+        printf("NO OpenMP time: %e [sec.]\n", end_time - start_time);
+    }
+
+    if (myid == 0) {
+        printf("openmp_norm: %e, norm: %e\n", openmp_norm, norm);
+    }
+
+
     //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
 
     //my_daxpy(vec_loc_size, 3, x_loc, r_loc);
+
+/*
     start_time = MPI_Wtime();
 
     double global_sum = 0.0;
@@ -125,10 +178,10 @@ int main(int argc, char *argv[]) {
 
         double local_sum = 0.0;
 
-        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
+        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
 
-        my_daxpy(vec_loc_size, -1, x_loc, r_loc);       /* r_loc <- r_loc - x_loc */
-        local_sum = my_ddot(vec_loc_size, x_loc, x_loc);
+        //my_daxpy(vec_loc_size, -1, x_loc, r_loc); 
+        local_sum = my_openmp_ddot(vec_loc_size, r_loc, r_loc);
         #pragma omp atomic
         global_sum += local_sum;
         #pragma omp barrier
@@ -147,16 +200,17 @@ int main(int argc, char *argv[]) {
         printf("iter: %d, local_sum: %e, global_sum: %e\n", iter, local_sum, global_sum);
     }
 }
-        //double dot = my_ddot(vec_loc_size, x_loc, r_loc);   /* dot = (x_loc, r_loc) */
-        my_dscal(vec_loc_size, 1, x_loc);       /* x_loc <- 1 * x_loc */
-        my_dcopy(vec_loc_size, x_loc, r_loc);   /* r_loc <- x_loc */
+        #pragma omp barrier
+        //double dot = my_openmp_ddot(vec_loc_size, x_loc, r_loc);
+        my_openmp_dscal(vec_loc_size, 1, x_loc);
+        my_openmp_dcopy(vec_loc_size, x_loc, r_loc);
         global_sum = 0.0;
     }
 }
 
     end_time = MPI_Wtime();
 
-
+/*
     if (myid == 0) {
         double sum = 0;
         for (int i = 0; i < vec_loc_size; i++) {
@@ -166,6 +220,39 @@ int main(int argc, char *argv[]) {
         printf("sum of r_loc elements: %e\n", sum);
         printf("Calculation time: %e [sec.]\n", end_time - start_time);
     }
+*/
+
+/*
+    start_time = MPI_Wtime();
+
+    global_sum = 0.0;
+
+    
+    for (int iter = 0; iter < 100; iter++) {
+        MPI_Request global_sum_req;
+
+        double local_sum = 0.0;
+
+        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
+
+        //my_daxpy(vec_loc_size, -1, x_loc, r_loc);
+        global_sum = my_ddot(vec_loc_size, r_loc, r_loc);
+        MPI_Iallreduce(MPI_IN_PLACE, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &global_sum_req);
+        MPI_Wait(&global_sum_req, MPI_STATUS_IGNORE);
+
+        if (myid == 0 && iter == 99) {
+            printf("r_loc: [0]: %e [1]: %e [2]: %e\n", r_loc[0], r_loc[1], r_loc[2]);
+            printf("iter: %d, local_sum: %e, global_sum: %e\n", iter, local_sum, global_sum);
+        }
+        
+        //double dot = my_ddot(vec_loc_size, x_loc, r_loc);
+        my_dscal(vec_loc_size, 1, x_loc);
+        my_dcopy(vec_loc_size, x_loc, r_loc);
+        global_sum = 0.0;
+    }
+
+    end_time = MPI_Wtime();
+*/
 
 	csr_free_matrix(A_loc_diag); free(A_loc_diag);
     csr_free_matrix(A_loc_offd); free(A_loc_offd);
