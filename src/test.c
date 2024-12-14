@@ -114,14 +114,43 @@ int main(int argc, char *argv[]) {
     //my_daxpy(vec_loc_size, 3, x_loc, r_loc);
     start_time = MPI_Wtime();
 
+    double global_sum = 0.0;
+
 #pragma omp parallel
 {
+
+    
     for (int iter = 0; iter < 100; iter++) {
-        //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
+        MPI_Request global_sum_req;
+
+        double local_sum = 0.0;
+
+        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc, x, r_loc);
+
         my_daxpy(vec_loc_size, -1, x_loc, r_loc);       /* r_loc <- r_loc - x_loc */
+        local_sum = my_ddot(vec_loc_size, x_loc, x_loc);
+        #pragma omp atomic
+        global_sum += local_sum;
+        #pragma omp barrier
+        #pragma omp master
+        {
+            MPI_Iallreduce(MPI_IN_PLACE, &global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &global_sum_req);
+        }
+        #pragma omp master
+        {
+            MPI_Wait(&global_sum_req, MPI_STATUS_IGNORE);
+        }
+#pragma omp master
+{
+    if (myid == 0 && iter == 99) {
+        printf("r_loc: [0]: %e [1]: %e [2]: %e\n", r_loc[0], r_loc[1], r_loc[2]);
+        printf("iter: %d, local_sum: %e, global_sum: %e\n", iter, local_sum, global_sum);
+    }
+}
         //double dot = my_ddot(vec_loc_size, x_loc, r_loc);   /* dot = (x_loc, r_loc) */
         my_dscal(vec_loc_size, 1, x_loc);       /* x_loc <- 1 * x_loc */
         my_dcopy(vec_loc_size, x_loc, r_loc);   /* r_loc <- x_loc */
+        global_sum = 0.0;
     }
 }
 

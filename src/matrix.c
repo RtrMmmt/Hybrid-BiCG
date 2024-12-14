@@ -425,44 +425,33 @@ void MPI_csr_load_matrix_block(char *filename, CSR_Matrix *matrix_loc_diag, CSR_
  * 			ベクトルの集約が終わったら、残りの非対角ブロックとベクトルの積を計算
  * 			今回の実装ではこれを採用
  ******************************************************************************/
+
 void MPI_csr_spmv_ovlap(CSR_Matrix *matrix_loc_diag, CSR_Matrix *matrix_loc_offd, INFO_Matrix *matrix_info, double *x_loc, double *x, double *y_loc) {
 	int i;
-	
 	MPI_Request x_req;
-	MPI_Iallgatherv(x_loc, matrix_loc_diag->rows, MPI_DOUBLE, x, matrix_info->recvcounts, matrix_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &x_req);
+	
+    #pragma omp master
+    {
+        MPI_Iallgatherv(x_loc, matrix_loc_diag->rows, MPI_DOUBLE, x, matrix_info->recvcounts, matrix_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &x_req);
+    }
+    //#pragma omp barrier
 
 	#pragma omp for
     for (i = 0; i < matrix_loc_diag->rows; i++) {
         y_loc[i] = 0.0;
     }
+	mult(matrix_loc_diag, x_loc, y_loc);
 
-	#pragma omp for
-	for (i = 0; i < matrix_loc_diag->rows; i++) {
-		unsigned int j, end = matrix_loc_diag->ptr[i+1];
-		double tempy = 0.0;
+	//printf("mult_diag\n");
 
-		for (j = matrix_loc_diag->ptr[i]; j < end; j++) {
-			tempy += matrix_loc_diag->val[j] * x_loc[matrix_loc_diag->col[j]];
-		}
-
-		//#pragma omp atomic
-		y_loc[i] += tempy;
-	}
-
-	MPI_Wait(&x_req, MPI_STATUS_IGNORE);
-	
-    #pragma omp for
-    for (i = 0; i < matrix_loc_offd->rows; i++) {
-        unsigned int j, end = matrix_loc_offd->ptr[i+1];
-        double tempy = 0.0;
-
-        for (j = matrix_loc_offd->ptr[i]; j < end; j++) {
-            tempy += matrix_loc_offd->val[j] * x[matrix_loc_offd->col[j]];
-        }
-
-        //#pragma omp atomic
-        y_loc[i] += tempy;
+    #pragma omp master
+    {
+        MPI_Wait(&x_req, MPI_STATUS_IGNORE);
     }
+    #pragma omp barrier
+    mult(matrix_loc_offd, x, y_loc);
+
+	//printf("mult_offd\n");
 }
 
 /******************************************************************************
@@ -528,6 +517,7 @@ void mult(CSR_Matrix *A_loc, double *x, double *y_loc) {
 	unsigned int    *ptr = A_loc->ptr;
 	end = 0;
 	
+	#pragma omp for private(j)
 	for(i = 0; i < A_loc->rows; i++) {
 		tempy = 0.0;
 		j = end;
@@ -536,6 +526,7 @@ void mult(CSR_Matrix *A_loc, double *x, double *y_loc) {
 		for( ; j < end; j++) {
 			tempy += val[j] * x[col[j]];
 		}
+		//#pragma omp atomic
 		y_loc[i] += tempy;
 	}
 }
