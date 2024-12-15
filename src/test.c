@@ -15,7 +15,9 @@
 
 int main(int argc, char *argv[]) {
 
-    MPI_Init(&argc, &argv);
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    //MPI_Init(&argc, &argv);
 
     int numprocs, myid, namelen;
     char proc_name[MPI_MAX_PROCESSOR_NAME];
@@ -130,6 +132,12 @@ int main(int argc, char *argv[]) {
         #pragma omp master
         MPI_Allreduce(MPI_IN_PLACE, &openmp_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         #pragma omp barrier
+        #pragma omp single
+        {
+            openmp_norm *= 2.0;
+            openmp_norm /= 2.0;
+        }
+        
     }
 }
 
