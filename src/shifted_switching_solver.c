@@ -2,16 +2,16 @@
 
 #define IDX(set, i, rows) ((set) + (i) * (rows))
 
-#define EPS 1.0e-12   /* 収束判定条件 */
-#define MAX_ITER 1000 /* 最大反復回数 */
+#define EPS 1.0e-12   // 収束判定条件 
+#define MAX_ITER 1000 // 最大反復回数 
 
-#define MEASURE_TIME /* 時間計測 */
-#define MEASURE_SECTION_TIME /* セクション時間計測 */
+#define MEASURE_TIME // 時間計測 
+#define MEASURE_SECTION_TIME // セクション時間計測 
 
-//#define DISPLAY_RESULT /* 結果表示 */
-//#define DISPLAY_RESIDUAL /* 途中の残差表示 */
-#define DISPLAY_SIGMA_RESIDUAL /* 途中のsigma毎の残差表示 */
-#define OUT_ITER 100     /* 残差の表示間隔 */
+#define DISPLAY_RESULT // 結果表示 
+//#define DISPLAY_RESIDUAL // 途中の残差表示 
+//#define DISPLAY_SIGMA_RESIDUAL // 途中のsigma毎の残差表示 
+#define OUT_ITER 10     // 残差の表示間隔 
 
 
 int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix *A_info, double *x_loc_set, double *r_loc, double *sigma, int sigma_len, int seed) {
@@ -61,7 +61,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 
     vec         = (double *)malloc(vec_size * sizeof(double));
 
-    p_loc_set   = (double *)calloc(vec_loc_size * sigma_len, sizeof(double)); /* 一応ゼロで初期化(下でもOK) */
+    p_loc_set   = (double *)calloc(vec_loc_size * sigma_len, sizeof(double)); // 一応ゼロで初期化(下でもOK) 
     //p_loc_set   = (double *)malloc(vec_loc_size * sigma_len * sizeof(double));
     alpha_set   = (double *)malloc(sigma_len * sizeof(double));
     beta_set    = (double *)malloc(sigma_len * sizeof(double));
@@ -71,7 +71,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
     pi_new_set  = (double *)malloc(sigma_len * sizeof(double));
     pi_old_set  = (double *)malloc(sigma_len * sizeof(double));
 
-    stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); /* Falseで初期化 */
+    stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); // Falseで初期化 
 
 #ifdef MEASURE_SECTION_TIME
         double seed_time, shift_time;
@@ -79,24 +79,24 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
         seed_time = 0; shift_time = 0;
 #endif
 
-    global_rTr = my_ddot(vec_loc_size, r_loc, r_loc);      /* (r#,r) */
+    global_rTr = my_ddot(vec_loc_size, r_loc, r_loc);      // (r#,r) 
     MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);
-    my_dcopy(vec_loc_size, r_loc, r_hat_loc);   /* r# <- r = b */
+    my_dcopy(vec_loc_size, r_loc, r_hat_loc);   // r# <- r = b 
     for (i = 0; i < sigma_len; i++) {
-        my_dcopy(vec_loc_size, r_loc, &p_loc_set[i * vec_loc_size]);    /* p[sigma] <- b */
-        alpha_set[i]  = 1.0;  /* alpha[sigma]  <- 1 */
-        beta_set[i]   = 0.0;  /* beta[sigma]   <- 0 */        
-        eta_set[i]    = 0.0;  /* eta[sigma]    <- 0 */
-        pi_old_set[i] = 1.0;  /* pi_old[sigma] <- 1 */
-        pi_new_set[i] = 1.0;  /* pi_new[sigma] <- 1 */
-        zeta_set[i]   = 1.0;  /* zeta[sigma]   <- 1 */
+        my_dcopy(vec_loc_size, r_loc, &p_loc_set[i * vec_loc_size]);    // p[sigma] <- b 
+        alpha_set[i]  = 1.0;  // alpha[sigma]  <- 1 
+        beta_set[i]   = 0.0;  // beta[sigma]   <- 0         
+        eta_set[i]    = 0.0;  // eta[sigma]    <- 0 
+        pi_old_set[i] = 1.0;  // pi_old[sigma] <- 1 
+        pi_new_set[i] = 1.0;  // pi_new[sigma] <- 1 
+        zeta_set[i]   = 1.0;  // zeta[sigma]   <- 1 
     }
     my_dcopy(vec_loc_size, r_loc, &p_loc_set[seed * vec_loc_size]);
     MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
 
-    global_dot_r = global_rTr;    /* (r,r) */
-    global_dot_zero = global_rTr; /* (r#,r#) */
-    max_zeta_pi = 1.0;   /* max(|1/(zeta pi)|) */
+    global_dot_r = global_rTr;    // (r,r) 
+    global_dot_zero = global_rTr; // (r#,r#) 
+    max_zeta_pi = 1.0;   // max(|1/(zeta pi)|) 
 
 #if defined(MEASURE_TIME) || defined(MEASURE_SECTION_TIME)
     start_time = MPI_Wtime();
@@ -108,6 +108,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 
     while (stop_count < sigma_len && k < max_iter) {
 
+        // ===== グローバル変数の初期化 =====
         #pragma omp single
         {
             global_rTs = 0.0;
@@ -116,43 +117,54 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
             global_dot_r = 0.0;
         }
 
-        my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       /* r_old <- r */
-        my_openmp_dcopy(sigma_len, pi_new_set, pi_old_set);    /* pi_old[sigma] <- pi_new[sigma] */
+        // ===== ベクトルのコピー =====
+        my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
+        my_openmp_dcopy(sigma_len, pi_new_set, pi_old_set);    // pi_old[sigma] <- pi_new[sigma] 
+
+        // ===== alpha_old と beta_old の更新 =====
         #pragma omp single
         {
-            alpha_old = alpha_set[seed];    /* alpha_old <- alpha[seed] */
-            beta_old = beta_set[seed];      /* beta_old <- beta[seed] */
+            alpha_old = alpha_set[seed];    // alpha_old <- alpha[seed] 
+            beta_old = beta_set[seed];      // beta_old <- beta[seed] 
         }
 
-        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  /* s <- (A + sigma[seed] I) p[seed] */
+        // ===== r# <- (A + sigma[seed] I) p[seed] =====
+        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
-        local_rTs = my_openmp_ddot(vec_loc_size, r_hat_loc, s_loc);
 
+        // ===== rTs = (r_hat, s) =====
+        local_rTs = my_openmp_ddot(vec_loc_size, r_hat_loc, s_loc);
         #pragma omp atomic
         global_rTs += local_rTs;
         #pragma omp barrier
-        
         #pragma omp master
         {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTs_req);  /* rTs <- (r#,s) */
+            MPI_Iallreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTs_req);  // rTs <- (r#,s) 
             MPI_Wait(&rTs_req, MPI_STATUS_IGNORE);
         }
         #pragma omp barrier
 
+        // ===== alpha[seed] の更新 =====
         #pragma omp single
         {
-            alpha_set[seed] = global_rTr / global_rTs;   /* alpha[seed] <- (r#,r)/(r#,s) */
+            alpha_set[seed] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
         }
-        my_openmp_daxpy(vec_loc_size, -alpha_set[seed], s_loc, r_loc);   /* q <- r - alpha[seed] s (qはrを再利用する)*/
-        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  /* y <- (A + sigma[seed] I) q */
+
+        // ===== q <- r - alpha[seed] s =====
+        my_openmp_daxpy(vec_loc_size, -alpha_set[seed], s_loc, r_loc);   // q <- r - alpha[seed] s (qはrを再利用する)
+
+        // ===== y <- (A + sigma[seed] I) q =====
+        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
+
+        // ===== (q,q) と (q,y) の計算 =====
         local_qTq = my_openmp_ddot(vec_loc_size, r_loc, r_loc);
         #pragma omp atomic
         global_qTq += local_qTq;
         #pragma omp barrier
         #pragma omp master
         {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTq_req);  /* (q,q) */
+            MPI_Iallreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTq_req);  // (q,q) 
         }
         local_qTy = my_openmp_ddot(vec_loc_size, r_loc, y_loc);
         #pragma omp atomic
@@ -160,17 +172,20 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
         #pragma omp barrier
         #pragma omp master
         {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTy_req);  /* (q,y) */
+            MPI_Iallreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTy_req);  // (q,y) 
             MPI_Wait(&qTq_req, MPI_STATUS_IGNORE);
             MPI_Wait(&qTy_req, MPI_STATUS_IGNORE);
         }
         #pragma omp barrier
 
+        // ===== omega[seed] の更新 =====
         #pragma omp single
         {
-            omega_set[seed] = global_qTq / global_qTy;  /* omega[seed] <- (q,q)/(q,y) */
+            omega_set[seed] = global_qTq / global_qTy;  // omega[seed] <- (q,q)/(q,y) 
         }
-        my_openmp_daxpy(vec_loc_size, alpha_set[seed], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     /* x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q */
+
+        // ===== x[seed] の更新 =====
+        my_openmp_daxpy(vec_loc_size, alpha_set[seed], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     // x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q 
         my_openmp_daxpy(vec_loc_size, omega_set[seed], r_loc, &x_loc_set[seed * vec_loc_size]);
 
 #ifdef MEASURE_SECTION_TIME
@@ -180,24 +195,25 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
         }
 #endif
 
+        // ===== シフト方程式 =====
         for (j = 0; j < sigma_len; j++) {
-            if (j == seed) continue;   /* seedはスキップ */
-            if (stop_flag[j]) continue;  /* 収束したものはスキップ */
+            if (j == seed) continue;   // seedはスキップ 
+            if (stop_flag[j]) continue;  // 収束したものはスキップ 
             #pragma omp single
             {
                 eta_set[j] = (beta_old / alpha_old) * alpha_set[seed] * eta_set[j] - (sigma[seed] - sigma[j]) * alpha_set[seed] * pi_old_set[j];
-                /* eta[sigma] = (beta_old / alpha_old) alpha[seed] eta[sigma] - (sigma[seed] - sigma[sigma]) alpha[seed] pi_old[sigma] */
-                pi_new_set[j] = eta_set[j] + pi_old_set[j];    /* pi_new[sigma] <- eta[sigma] + pi_old[sigma] */
-                alpha_set[j] = (pi_old_set[j] / pi_new_set[j]) * alpha_set[seed];     /* alpha[sigma] <- (pi_old[sigma] / pi_new[sigma]) alpha[seed] */
-                omega_set[j] = omega_set[seed] / (1.0 - omega_set[seed] * (sigma[seed] - sigma[j]));      /* omega[sigma] <- omega[0] / (1.0 + omega[0] * sigma) */
+                // eta[sigma] = (beta_old / alpha_old) alpha[seed] eta[sigma] - (sigma[seed] - sigma[sigma]) alpha[seed] pi_old[sigma] 
+                pi_new_set[j] = eta_set[j] + pi_old_set[j];    // pi_new[sigma] <- eta[sigma] + pi_old[sigma] 
+                alpha_set[j] = (pi_old_set[j] / pi_new_set[j]) * alpha_set[seed];     // alpha[sigma] <- (pi_old[sigma] / pi_new[sigma]) alpha[seed] 
+                omega_set[j] = omega_set[seed] / (1.0 - omega_set[seed] * (sigma[seed] - sigma[j]));      // omega[sigma] <- omega[0] / (1.0 + omega[0] * sigma) 
             }
-            my_openmp_daxpy(vec_loc_size, omega_set[j] / (pi_new_set[j] * zeta_set[j]), r_loc, &x_loc_set[j * vec_loc_size]);     /* x[sigma] <- x[sigma] + alpha[sigma] p[sigma] + omega[sigma] / (pi_new[sigma] zeta[sigma]) q */
+            my_openmp_daxpy(vec_loc_size, omega_set[j] / (pi_new_set[j] * zeta_set[j]), r_loc, &x_loc_set[j * vec_loc_size]);     // x[sigma] <- x[sigma] + alpha[sigma] p[sigma] + omega[sigma] / (pi_new[sigma] zeta[sigma]) q 
             my_openmp_daxpy(vec_loc_size, alpha_set[j], &p_loc_set[j * vec_loc_size], &x_loc_set[j * vec_loc_size]);
-            my_openmp_daxpy(vec_loc_size, omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_new_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);    /* p[sigma] <- p[sigma] + omega[sigma] / (alpha[sigma] zeta[sigma]) (q / pi_new[sigma] - r_old / pi_old[sigma]) */
+            my_openmp_daxpy(vec_loc_size, omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_new_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);    // p[sigma] <- p[sigma] + omega[sigma] / (alpha[sigma] zeta[sigma]) (q / pi_new[sigma] - r_old / pi_old[sigma]) 
             my_openmp_daxpy(vec_loc_size, -omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_old_set[j]), r_old_loc, &p_loc_set[j * vec_loc_size]);
             #pragma omp single
             {
-                zeta_set[j] = (1.0 - omega_set[seed] * (sigma[seed] - sigma[j])) * zeta_set[j];      /* zeta[sigma] <- (1.0 - omega[seed] (sigma[seed] - sigma[sigma])) * zeta[sigma] */
+                zeta_set[j] = (1.0 - omega_set[seed] * (sigma[seed] - sigma[j])) * zeta_set[j];      // zeta[sigma] <- (1.0 - omega[seed] (sigma[seed] - sigma[sigma])) * zeta[sigma] 
             }
         }
 
@@ -209,16 +225,21 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
         }
 #endif
 
-        my_openmp_daxpy(vec_loc_size, -omega_set[seed], y_loc, r_loc);            /* r <- q - omega[seed] y */
+        // ==== r の更新 ====
+        my_openmp_daxpy(vec_loc_size, -omega_set[seed], y_loc, r_loc);            // r <- q - omega[seed] y 
+
+        // ==== (r,r) の計算 ====
         local_dot_r = my_openmp_ddot(vec_loc_size, r_loc, r_loc);
         #pragma omp atomic
         global_dot_r += local_dot_r;
         #pragma omp barrier
         #pragma omp master
         {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &dot_r_req);  /* (r,r) */
-            global_rTr_old = global_rTr;      /* r_old <- (r#,r) */
+            MPI_Iallreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &dot_r_req);  // (r,r) 
+            global_rTr_old = global_rTr;      // r_old <- (r#,r) 
         }
+
+        // ==== (r#,r) の計算 ====
         local_rTr = my_openmp_ddot(vec_loc_size, r_hat_loc, r_loc);
         #pragma omp single
         {
@@ -229,28 +250,32 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
         #pragma omp barrier
         #pragma omp master
         {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);  /* (r#,r) */
+            MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);  // (r#,r) 
             MPI_Wait(&dot_r_req, MPI_STATUS_IGNORE);
             MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
         }
         #pragma omp barrier
 
+        // ==== beta[seed] の更新 ====
         #pragma omp single
         {
-            beta_set[seed] = (alpha_set[seed] / omega_set[seed]) * (global_rTr / global_rTr_old);   /* beta[seed] <- (alpha[seed] / omega[seed]) ((r#,r)/(r#,r)) */
+            beta_set[seed] = (alpha_set[seed] / omega_set[seed]) * (global_rTr / global_rTr_old);   // beta[seed] <- (alpha[seed] / omega[seed]) ((r#,r)/(r#,r)) 
         }
-        my_openmp_dscal(vec_loc_size, beta_set[seed], &p_loc_set[seed * vec_loc_size]);     /* p[seed] <- r + beta[seed] p[seed] - beta[seed] omega[seed] s */
+
+        // ==== p[seed] の更新 ====
+        my_openmp_dscal(vec_loc_size, beta_set[seed], &p_loc_set[seed * vec_loc_size]);     // p[seed] <- r + beta[seed] p[seed] - beta[seed] omega[seed] s 
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_set[seed] * omega_set[seed], s_loc, &p_loc_set[seed * vec_loc_size]);
 
+        // ==== シフト方程式 ====
         for (j = 0; j < sigma_len; j++) {
             if (j == seed) continue;
             if (stop_flag[j]) continue;
             #pragma omp single
             {
-                beta_set[j] = (pi_old_set[j] / pi_new_set[j]) * (pi_old_set[j] / pi_new_set[j]) * beta_set[seed]; /* beta[sigma] <- (pi_old[sigma] / pi_new[sigma])^2 beta[seed] */
+                beta_set[j] = (pi_old_set[j] / pi_new_set[j]) * (pi_old_set[j] / pi_new_set[j]) * beta_set[seed]; // beta[sigma] <- (pi_old[sigma] / pi_new[sigma])^2 beta[seed] 
             }
-            my_openmp_dscal(vec_loc_size, beta_set[j], &p_loc_set[j * vec_loc_size]);      /* p[sigma] <- 1 / (pi_new[sigma] zeta[sigma]) r + beta[sigma] p[sigma] */
+            my_openmp_dscal(vec_loc_size, beta_set[j], &p_loc_set[j * vec_loc_size]);      // p[sigma] <- 1 / (pi_new[sigma] zeta[sigma]) r + beta[sigma] p[sigma] 
             my_openmp_daxpy(vec_loc_size, 1.0 / (pi_new_set[j] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
         }
 
@@ -318,7 +343,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 #endif
 
     if (myid == 0) {
-#ifdef DISPLAY_RESIDUAL
+#ifdef DISPLAY_RESULT
         printf("Total iter   : %d\n", k - 1);
         printf("Final r      : %e\n", sqrt(global_dot_r / global_dot_zero));
 #endif
@@ -391,7 +416,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     vec         = (double *)malloc(vec_size * sizeof(double));
 
-    p_loc_set   = (double *)calloc(vec_loc_size * sigma_len, sizeof(double)); /* 一応ゼロで初期化(下でもOK) */
+    p_loc_set   = (double *)calloc(vec_loc_size * sigma_len, sizeof(double)); // 一応ゼロで初期化(下でもOK) 
     //p_loc_set   = (double *)malloc(vec_loc_size * sigma_len * sizeof(double));
     alpha_set   = (double *)malloc(sigma_len * sizeof(double));
     beta_set    = (double *)malloc(sigma_len * sizeof(double));
@@ -400,13 +425,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     zeta_set    = (double *)malloc(sigma_len * sizeof(double));
 
 
-    /* seed switching で使うので履歴を保存する */
+    // seed switching で使うので履歴を保存する 
     alpha_seed_archive  = (double *)malloc(max_iter * sizeof(double));
     beta_seed_archive   = (double *)malloc(max_iter * sizeof(double));
     omega_seed_archive  = (double *)malloc(max_iter * sizeof(double));
     pi_archive_set      = (double *)malloc(max_iter * sigma_len * sizeof(double));
 
-    stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); /* Falseで初期化 */
+    stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); // Falseで初期化 
 
 #ifdef MEASURE_SECTION_TIME
         double seed_time, shift_time, switch_time;
@@ -414,24 +439,24 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         seed_time = 0; shift_time = 0; switch_time = 0;
 #endif
 
-    rTr = my_ddot(vec_loc_size, r_loc, r_loc);      /* (r#,r) */
+    rTr = my_ddot(vec_loc_size, r_loc, r_loc);      // (r#,r) 
     MPI_Iallreduce(MPI_IN_PLACE, &rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);
-    my_dcopy(vec_loc_size, r_loc, r_hat_loc);   /* r# <- r = b */
+    my_dcopy(vec_loc_size, r_loc, r_hat_loc);   // r# <- r = b 
     for (i = 0; i < sigma_len; i++) {
-        my_dcopy(vec_loc_size, r_loc, &p_loc_set[i * vec_loc_size]);    /* p[sigma] <- b */
-        alpha_set[i]  = 1.0;  /* alpha[sigma]  <- 1 */
-        beta_set[i]   = 0.0;  /* beta[sigma]   <- 0 */
-        eta_set[i]    = 0.0;  /* eta[sigma]    <- 0 */
+        my_dcopy(vec_loc_size, r_loc, &p_loc_set[i * vec_loc_size]);    // p[sigma] <- b 
+        alpha_set[i]  = 1.0;  // alpha[sigma]  <- 1 
+        beta_set[i]   = 0.0;  // beta[sigma]   <- 0 
+        eta_set[i]    = 0.0;  // eta[sigma]    <- 0 
         pi_archive_set[i * max_iter + 0] = 1.0;
         pi_archive_set[i * max_iter + 1] = 1.0;
-        zeta_set[i]   = 1.0;  /* zeta[sigma]   <- 1 */
+        zeta_set[i]   = 1.0;  // zeta[sigma]   <- 1 
     }
     my_dcopy(vec_loc_size, r_loc, &p_loc_set[seed * vec_loc_size]);
     MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
 
-    dot_r = rTr;    /* (r,r) */
-    dot_zero = rTr; /* (r#,r#) */
-    max_zeta_pi = 1.0;   /* max(|1/(zeta pi)|) */
+    dot_r = rTr;    // (r,r) 
+    dot_zero = rTr; // (r#,r#) 
+    max_zeta_pi = 1.0;   // max(|1/(zeta pi)|) 
 
     alpha_seed_archive[0] = 1.0;
     beta_seed_archive[0]  = 0.0;
@@ -446,24 +471,24 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     while (stop_count < sigma_len && k < max_iter) {
 
-        my_dcopy(vec_loc_size, r_loc, r_old_loc);       /* r_old <- r */
+        my_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
-        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  /* s <- (A + sigma[seed] I) p[seed] */
+        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
         my_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
-        rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc); MPI_Iallreduce(MPI_IN_PLACE, &rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTs_req);  /* rTs <- (r#,s) */
+        rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc); MPI_Iallreduce(MPI_IN_PLACE, &rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTs_req);  // rTs <- (r#,s) 
         MPI_Wait(&rTs_req, MPI_STATUS_IGNORE);
 
-        alpha_seed_archive[k] = rTr / rTs;   /* alpha[seed] <- (r#,r)/(r#,s) */
-        my_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   /* q <- r - alpha[seed] s */
-        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  /* y <- (A + sigma[seed] I) q */
+        alpha_seed_archive[k] = rTr / rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
+        my_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
+        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
         my_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
-        qTq = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Iallreduce(MPI_IN_PLACE, &qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTq_req);  /* (q,q) */
-        qTy = my_ddot(vec_loc_size, r_loc, y_loc); MPI_Iallreduce(MPI_IN_PLACE, &qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTy_req);  /* (q,y) */
+        qTq = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Iallreduce(MPI_IN_PLACE, &qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTq_req);  // (q,q) 
+        qTy = my_ddot(vec_loc_size, r_loc, y_loc); MPI_Iallreduce(MPI_IN_PLACE, &qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTy_req);  // (q,y) 
         MPI_Wait(&qTq_req, MPI_STATUS_IGNORE);
         MPI_Wait(&qTy_req, MPI_STATUS_IGNORE);
 
-        omega_seed_archive[k] = qTq / qTy;  /* omega[seed] <- (q,q)/(q,y) */
-        my_daxpy(vec_loc_size, alpha_seed_archive[k], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     /* x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q */
+        omega_seed_archive[k] = qTq / qTy;  // omega[seed] <- (q,q)/(q,y) 
+        my_daxpy(vec_loc_size, alpha_seed_archive[k], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     // x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q 
         my_daxpy(vec_loc_size, omega_seed_archive[k], r_loc, &x_loc_set[seed * vec_loc_size]);
 
 #ifdef MEASURE_SECTION_TIME
@@ -474,15 +499,15 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             if (j == seed) continue;
             if (stop_flag[j]) continue;
             eta_set[j] = (beta_seed_archive[k - 1] / alpha_seed_archive[k - 1]) * alpha_seed_archive[k] * eta_set[j] - (sigma[seed] - sigma[j]) * alpha_seed_archive[k] * pi_archive_set[j * max_iter + (k - 1)];
-            /* eta[sigma] = (beta_old / alpha_old) alpha[seed] eta[sigma] - (sigma[seed] - sigma[sigma]) alpha[seed] pi_old[sigma] */
-            pi_archive_set[j * max_iter + k] = eta_set[j] + pi_archive_set[j * max_iter + (k - 1)];    /* pi_new[sigma] <- eta[sigma] + pi_old[sigma] */
-            alpha_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * alpha_seed_archive[k];     /* alpha[sigma] <- (pi_old[sigma] / pi_new[sigma]) alpha[seed] */
-            omega_set[j] = omega_seed_archive[k] / (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j]));      /* omega[sigma] <- omega[0] / (1.0 + omega[0] * sigma) */
-            my_daxpy(vec_loc_size, omega_set[j] / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &x_loc_set[j * vec_loc_size]);     /* x[sigma] <- x[sigma] + alpha[sigma] p[sigma] + omega[sigma] / (pi_new[sigma] zeta[sigma]) q */
+            // eta[sigma] = (beta_old / alpha_old) alpha[seed] eta[sigma] - (sigma[seed] - sigma[sigma]) alpha[seed] pi_old[sigma] 
+            pi_archive_set[j * max_iter + k] = eta_set[j] + pi_archive_set[j * max_iter + (k - 1)];    // pi_new[sigma] <- eta[sigma] + pi_old[sigma] 
+            alpha_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * alpha_seed_archive[k];     // alpha[sigma] <- (pi_old[sigma] / pi_new[sigma]) alpha[seed] 
+            omega_set[j] = omega_seed_archive[k] / (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j]));      // omega[sigma] <- omega[0] / (1.0 + omega[0] * sigma) 
+            my_daxpy(vec_loc_size, omega_set[j] / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &x_loc_set[j * vec_loc_size]);     // x[sigma] <- x[sigma] + alpha[sigma] p[sigma] + omega[sigma] / (pi_new[sigma] zeta[sigma]) q 
             my_daxpy(vec_loc_size, alpha_set[j], &p_loc_set[j * vec_loc_size], &x_loc_set[j * vec_loc_size]);
-            my_daxpy(vec_loc_size, omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_archive_set[j * max_iter + k]), r_loc, &p_loc_set[j * vec_loc_size]);    /* p[sigma] <- p[sigma] + omega[sigma] / (alpha[sigma] zeta[sigma]) (q / pi_new[sigma] - r_old / pi_old[sigma]) */
+            my_daxpy(vec_loc_size, omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_archive_set[j * max_iter + k]), r_loc, &p_loc_set[j * vec_loc_size]);    // p[sigma] <- p[sigma] + omega[sigma] / (alpha[sigma] zeta[sigma]) (q / pi_new[sigma] - r_old / pi_old[sigma]) 
             my_daxpy(vec_loc_size, -omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_archive_set[j * max_iter + (k - 1)]), r_old_loc, &p_loc_set[j * vec_loc_size]);
-            zeta_set[j] = (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j])) * zeta_set[j];      /* zeta[sigma] <- (1.0 - omega[seed] (sigma[seed] - sigma[sigma])) * zeta[sigma] */
+            zeta_set[j] = (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j])) * zeta_set[j];      // zeta[sigma] <- (1.0 - omega[seed] (sigma[seed] - sigma[sigma])) * zeta[sigma] 
         }
 
 #ifdef MEASURE_SECTION_TIME
@@ -490,15 +515,15 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         shift_time += section_end_time - section_start_time;
 #endif
 
-        my_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            /* r <- q - omega[seed] y */
-        dot_r = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Iallreduce(MPI_IN_PLACE, &dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &dot_r_req);  /* (r,r) */
-        rTr_old = rTr;      /* r_old <- (r#,r) */
-        rTr = my_ddot(vec_loc_size, r_hat_loc, r_loc); MPI_Iallreduce(MPI_IN_PLACE, &rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);  /* (r#,r) */
+        my_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
+        dot_r = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Iallreduce(MPI_IN_PLACE, &dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &dot_r_req);  // (r,r) 
+        rTr_old = rTr;      // r_old <- (r#,r) 
+        rTr = my_ddot(vec_loc_size, r_hat_loc, r_loc); MPI_Iallreduce(MPI_IN_PLACE, &rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);  // (r#,r) 
         MPI_Wait(&dot_r_req, MPI_STATUS_IGNORE);
         MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
 
-        beta_seed_archive[k] = (alpha_seed_archive[k] / omega_seed_archive[k]) * (rTr / rTr_old);   /* beta[seed] <- (alpha[seed] / omega[seed]) ((r#,r)/(r#,r)) */
-        my_dscal(vec_loc_size, beta_seed_archive[k], &p_loc_set[seed * vec_loc_size]);     /* p[seed] <- r + beta[seed] p[seed] - beta[seed] omega[seed] s */
+        beta_seed_archive[k] = (alpha_seed_archive[k] / omega_seed_archive[k]) * (rTr / rTr_old);   // beta[seed] <- (alpha[seed] / omega[seed]) ((r#,r)/(r#,r)) 
+        my_dscal(vec_loc_size, beta_seed_archive[k], &p_loc_set[seed * vec_loc_size]);     // p[seed] <- r + beta[seed] p[seed] - beta[seed] omega[seed] s 
         my_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
@@ -509,8 +534,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         for (j = 0; j < sigma_len; j++) {
             if (j == seed) continue;
             if (stop_flag[j]) continue;
-            beta_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * beta_seed_archive[k]; /* beta[sigma] <- (pi_old[sigma] / pi_new[sigma])^2 beta[seed] */
-            my_dscal(vec_loc_size, beta_set[j], &p_loc_set[j * vec_loc_size]);      /* p[sigma] <- 1 / (pi_new[sigma] zeta[sigma]) r + beta[sigma] p[sigma] */
+            beta_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * beta_seed_archive[k]; // beta[sigma] <- (pi_old[sigma] / pi_new[sigma])^2 beta[seed] 
+            my_dscal(vec_loc_size, beta_set[j], &p_loc_set[j * vec_loc_size]);      // p[sigma] <- 1 / (pi_new[sigma] zeta[sigma]) r + beta[sigma] p[sigma] 
             my_daxpy(vec_loc_size, 1.0 / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
         }
 
@@ -556,7 +581,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         section_start_time = MPI_Wtime();
 #endif
 
-        /* seed switching */
+        // seed switching 
         if (stop_flag[seed] && stop_count < sigma_len) {
 #ifdef DISPLAY_SIGMA_RESIDUAL
             if (myid == 0) printf("Seed : %d\n", max_sigma);
@@ -569,9 +594,9 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             my_dscal(vec_loc_size, 1.0 / (zeta_set[max_sigma] * pi_archive_set[max_sigma * max_iter + k]), r_loc);
 
             for (j = 0; j < sigma_len; j++) {
-                eta_set[j]    = 0.0;  /* eta[sigma]    <- 0 */
+                eta_set[j]    = 0.0;  // eta[sigma]    <- 0 
                 //pi_archive_set[j * max_iter + 0] = 1.0;
-                zeta_set[j]   = 1.0;  /* zeta[sigma]   <- 1 */
+                zeta_set[j]   = 1.0;  // zeta[sigma]   <- 1 
             }
             //alpha_seed_archive[0] = 1.0;
             //beta_seed_archive[0]  = 0.0;
