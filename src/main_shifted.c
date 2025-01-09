@@ -1,6 +1,6 @@
 /******************************************************************************
  * macでのコンパイルと実行コマンド
- * mpicc -O3 src/main_shifted.c src/shifted_switching_solver.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -fopenmp -L/usr/local/Cellar/libomp/19.1.5/lib -lomp
+ * mpicc -O3 src/main_shifted.c src/shifted_switching_solver.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
  * mpirun -np 4 ./a.out data/atmosmodd.mtx
  ******************************************************************************/
 
@@ -135,8 +135,9 @@ int main(int argc, char *argv[]) {
 
     int total_iter;
     /* 実行 */
-    total_iter = shifted_lopbicg(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    //total_iter = shifted_lopbicg(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     //total_iter = shifted_lopbicg_switching(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    total_iter = shifted_lopbicg_matvec_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
 
 #ifdef DISPLAY_ERROR
     for (int i = 0; i < sigma_len; i++) {

@@ -24,6 +24,31 @@ void MPI_openmp_csr_spmv_ovlap(CSR_Matrix *matrix_loc_diag, CSR_Matrix *matrix_l
 
     #pragma omp master
     MPI_Wait(&x_req, MPI_STATUS_IGNORE);
+
+	#pragma omp master
+	{
+	int num_procs;
+	MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    // total_vec_size の計算
+    int total_vec_size = 0;
+    for (int i = 0; i < num_procs; i++) { // num_procs はプロセス数
+        total_vec_size += matrix_info->recvcounts[i];
+    }
+
+    // vec_sum の計算
+    double vec_sum = 0.0;
+    for (int index = 0; index < total_vec_size; index++) {
+        vec_sum += x[index];
+    }
+
+    // 結果の出力
+    //printf("vec_sum: %e\n", vec_sum);
+	}
+
+	#pragma omp master
+	{
+		//printf("vec[0] = %e\n", x[0]);
+	}
     
     #pragma omp barrier
 
