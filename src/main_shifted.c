@@ -64,7 +64,20 @@ int main(int argc, char *argv[]) {
         free(all_proc_names);
     }
 
+    if (myid == 0) {
+        int threads_per_process = 0;
+
+        #pragma omp parallel
+        {
+            #pragma omp master
+            threads_per_process = omp_get_num_threads();
+        }
+
+        printf("MPI Process %d on Node '%s': Threads per Process = %d\n", myid, proc_name, threads_per_process);
+    }
+
     /* OpenMPスレッド数の確認 */
+    /*
     int threads_per_process = 0;
 
     #pragma omp parallel
@@ -73,8 +86,9 @@ int main(int argc, char *argv[]) {
         threads_per_process = omp_get_num_threads();
     }
 
-    /* 各プロセスで情報を表示 */
+    // 各プロセスで情報を表示
     printf("MPI Process %d on Node '%s': Threads per Process = %d\n", myid, proc_name, threads_per_process);
+    */
 #endif
 
     double start_time, end_time, total_time;

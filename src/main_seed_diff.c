@@ -65,6 +65,18 @@ int main(int argc, char *argv[]) {
     if (all_proc_names != NULL) {
         free(all_proc_names);
     }
+
+    if (myid == 0) {
+        int threads_per_process = 0;
+
+        #pragma omp parallel
+        {
+            #pragma omp master
+            threads_per_process = omp_get_num_threads();
+        }
+
+        printf("Thread: %d\n", threads_per_process);
+    }
 #endif
 
     double start_time, end_time, total_time;
