@@ -13,7 +13,7 @@
 //#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
 
 #define SIGMA_LENGTH 10
-#define SEED 6
+#define SEED 1
 
 int main(int argc, char *argv[]) {
 

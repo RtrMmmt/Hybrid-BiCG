@@ -1401,6 +1401,7 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
         //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
 
+/*
 #ifdef MEASURE_SECTION_TIME
         #pragma omp master
         {
@@ -1422,6 +1423,13 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
         section_end_time = MPI_Wtime();
         agv_1_time += section_end_time - section_start_time;
         agv_1_iter_time = section_end_time - section_start_time;
+        }
+#endif
+*/
+
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
         section_start_time = MPI_Wtime();
         }
 #endif
@@ -1440,11 +1448,16 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
         section_end_time = MPI_Wtime();
         mult_diag_1_time += section_end_time - section_start_time;
         mult_diag_1_iter_time = section_end_time - section_start_time;
-        section_start_time = MPI_Wtime();
         }
 #endif
 
-/*
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
+            section_start_time = MPI_Wtime();
+        }
+#endif
+
         // ベクトルの集約を待機
         if (k != 1) {
             #pragma omp master
@@ -1453,7 +1466,22 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
             }
             #pragma omp barrier
         }
-*/
+
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
+        section_end_time = MPI_Wtime();
+        agv_1_time += section_end_time - section_start_time;
+        agv_1_iter_time = section_end_time - section_start_time;
+        }
+#endif
+
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
+            section_start_time = MPI_Wtime();
+        }
+#endif
 
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, s_loc);
@@ -1512,6 +1540,7 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
         // ===== y <- (A + sigma[seed] I) q =====
         //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
 
+/*
 #ifdef MEASURE_SECTION_TIME
         #pragma omp master
         {
@@ -1530,7 +1559,19 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
         section_end_time = MPI_Wtime();
         agv_2_time += section_end_time - section_start_time;
         agv_2_iter_time = section_end_time - section_start_time;
-        section_start_time = MPI_Wtime();
+        }
+#endif
+*/
+
+        #pragma omp master
+        {
+            MPI_Iallgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
+        }
+
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
+            section_start_time = MPI_Wtime();
         }
 #endif
 
@@ -1548,18 +1589,38 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
         section_end_time = MPI_Wtime();
         mult_diag_2_time += section_end_time - section_start_time;
         mult_diag_2_iter_time = section_end_time - section_start_time;
+        }
+#endif
+
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
         section_start_time = MPI_Wtime();
         }
 #endif
 
-/*
         // ベクトルの集約を待機
         #pragma omp master
         {
             MPI_Wait(&vec_req, MPI_STATUS_IGNORE);
         }
         #pragma omp barrier
-*/
+
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
+        section_end_time = MPI_Wtime();
+        agv_2_time += section_end_time - section_start_time;
+        agv_2_iter_time = section_end_time - section_start_time;
+        }
+#endif
+
+#ifdef MEASURE_SECTION_TIME
+        #pragma omp master
+        {
+            section_start_time = MPI_Wtime();
+        }
+#endif
 
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, y_loc);
@@ -1686,13 +1747,13 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
-/*
+
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp master
         {
             MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
         }
-*/
+
 
         // ===== シフト方程式 =====
 
