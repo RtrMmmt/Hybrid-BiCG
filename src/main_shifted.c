@@ -12,8 +12,8 @@
 #define DISPLAY_ERROR  /* 相対誤差の表示 */
 //#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
 
-#define SIGMA_LENGTH 512
-#define SEED 255
+#define SIGMA_LENGTH 100
+#define SEED 50
 
 int main(int argc, char *argv[]) {
 
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
         double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
         if (myid == 0) {
             if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
-            else printf("1, %e, %e\n", sigma[i], rerative_error);
+            else if (i % 10 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
         }
     }
 #endif
