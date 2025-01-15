@@ -12,8 +12,8 @@
 #define DISPLAY_ERROR  /* 相対誤差の表示 */
 //#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
 
-#define SIGMA_LENGTH 10
-#define SEED 5
+#define SIGMA_LENGTH 512
+#define SEED 255
 
 int main(int argc, char *argv[]) {
 
