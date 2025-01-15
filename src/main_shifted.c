@@ -9,7 +9,7 @@
 #include "shifted_switching_solver.h"
 
 #define DISPLAY_NODE_INFO   /* ノード数とプロセス数の表示 */
-#define DISPLAY_ERROR  /* 相対誤差の表示 */
+//#define DISPLAY_ERROR  /* 相対誤差の表示 */
 //#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
 
 #define SIGMA_LENGTH 100
@@ -153,9 +153,9 @@ int main(int argc, char *argv[]) {
     int total_iter;
     /* 実行 */
     //total_iter = shifted_lopbicg(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-    //total_iter = shifted_lopbicg_switching(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    total_iter = shifted_lopbicg_switching(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     //total_iter = shifted_lopbicg_matvec_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-    total_iter = shifted_lopbicg_switching_noovlp(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    //total_iter = shifted_lopbicg_switching_noovlp(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
 
 #ifdef DISPLAY_ERROR
     if (myid == 0) {
