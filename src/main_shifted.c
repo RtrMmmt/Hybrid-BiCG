@@ -205,6 +205,8 @@ int main(int argc, char *argv[]) {
     free(x_loc_set); free(r_loc); free(x); free(r);
     free(A_info.recvcounts);  free(A_info.displs);
 
+    free(ans_loc);
+
 	MPI_Finalize();
 	return 0;
 }
