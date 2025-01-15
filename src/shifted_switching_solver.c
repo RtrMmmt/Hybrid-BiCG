@@ -6,8 +6,8 @@
 #define MAX_ITER 1000 // 最大反復回数 
 
 #define MEASURE_TIME // 時間計測 
-#define MEASURE_SECTION_TIME // セクション時間計測
-#define DISPLAY_SECTION_TIME // セクション時間表示 
+//#define MEASURE_SECTION_TIME // セクション時間計測
+//#define DISPLAY_SECTION_TIME // セクション時間表示 
 
 #define DISPLAY_RESULT // 結果表示 
 //#define DISPLAY_RESIDUAL // 途中の残差表示 
@@ -130,40 +130,19 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
         }
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
-        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
+        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed]
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
-
-        #pragma omp master
-        {
-            if (k == 0) {
-                //printf("s_loc[0] = %e\n", s_loc[0]);
-            }
-        }
-
-        local_rTs = my_openmp_ddot(vec_loc_size, s_loc, s_loc);
-        #pragma omp atomic
-        global_rTs += local_rTs;
-        #pragma omp barrier
-        #pragma omp master
-        {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTs_req);  // rTs <- (r#,s) 
-            MPI_Wait(&rTs_req, MPI_STATUS_IGNORE);
-            //printf("global_sTs: %e\n", global_rTs);
-        }
-        #pragma omp barrier
-
-        global_rTs = 0.0;
 
         // ===== rTs = (r_hat, s) =====
         local_rTs = my_openmp_ddot(vec_loc_size, r_hat_loc, s_loc);
         #pragma omp atomic
         global_rTs += local_rTs;
         #pragma omp barrier
+
         #pragma omp master
         {
             MPI_Iallreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTs_req);  // rTs <- (r#,s) 
             MPI_Wait(&rTs_req, MPI_STATUS_IGNORE);
-            //printf("global_rTs: %e\n", global_rTs);
         }
         #pragma omp barrier
 
@@ -369,6 +348,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 #ifdef DISPLAY_RESULT
         printf("Total iter   : %d\n", k - 1);
         printf("Final r      : %e\n", sqrt(global_dot_r / global_dot_zero));
+        printf("x            : %e\n", x_loc_set[seed * vec_loc_size]);
 #endif
 #ifdef MEASURE_TIME
         printf("Total time   : %e [sec.] \n", total_time);

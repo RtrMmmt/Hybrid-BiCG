@@ -9,11 +9,11 @@
 #include "shifted_switching_solver.h"
 
 #define DISPLAY_NODE_INFO   /* ノード数とプロセス数の表示 */
-//#define DISPLAY_ERROR  /* 相対誤差の表示 */
+#define DISPLAY_ERROR  /* 相対誤差の表示 */
 //#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
 
-#define SIGMA_LENGTH 512
-#define SEED 1
+#define SIGMA_LENGTH 10
+#define SEED 5
 
 int main(int argc, char *argv[]) {
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
     int seed = SEED;
 
     for (int i = 0; i < sigma_len; ++i) {
-        //sigma[i] = (i + 1) * 0.01;
+        //sigma[i] = (i) * 0.01;
         //sigma[i] = (i + 1) * 0.1;
         //sigma[i] = 0.01;
         sigma[i] = (i + 1) * (0.01 / sigma_len);
@@ -158,6 +158,9 @@ int main(int argc, char *argv[]) {
     total_iter = shifted_lopbicg_switching_noovlp(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
 
 #ifdef DISPLAY_ERROR
+    if (myid == 0) {
+        printf("seed(0:seed, 1:shift), sigma, relative error\n");
+    }
     for (int i = 0; i < sigma_len; i++) {
         //if (i != 0) csr_shift_diagonal(A_loc_diag, 0.01);
         //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, &x_loc_set[i * vec_loc_size], x, r_loc);
@@ -176,10 +179,10 @@ int main(int argc, char *argv[]) {
         MPI_Allreduce(&local_diff_norm_2, &global_diff_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(&local_ans_norm_2, &global_ans_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2);
+        double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
         if (myid == 0) {
-            if (i == seed) printf("#seed: %.2f, relative error: %e\n", sigma[i], rerative_error);
-            else printf("sigma: %.2f, relative error: %e\n", sigma[i], rerative_error);
+            if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
+            else printf("1, %e, %e\n", sigma[i], rerative_error);
         }
     }
 #endif
