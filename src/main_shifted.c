@@ -9,7 +9,7 @@
 #include "shifted_switching_solver.h"
 
 #define DISPLAY_NODE_INFO   /* ノード数とプロセス数の表示 */
-//#define DISPLAY_ERROR  /* 相対誤差の表示 */
+#define DISPLAY_ERROR  /* 相対誤差の表示 */
 //#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
 
 #define SIGMA_LENGTH 100
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
         //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, &x_loc_set[i * vec_loc_size], x, r_loc);
         MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, &x_loc_set[i * vec_loc_size], x, r_loc);
         my_daxpy(vec_loc_size, sigma[i], &x_loc_set[i * vec_loc_size], r_loc);
-
+/*
         double diff;
         double local_diff_norm_2 = 0;
         double local_ans_norm_2 = 0;
@@ -183,6 +183,10 @@ int main(int argc, char *argv[]) {
         if (myid == 0) {
             if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
             else if (i % 10 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
+        }
+*/
+        if (myid == 0) {
+            printf("done\n");
         }
     }
 #endif
