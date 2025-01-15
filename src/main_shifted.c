@@ -157,12 +157,13 @@ int main(int argc, char *argv[]) {
     //total_iter = shifted_lopbicg_matvec_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     //total_iter = shifted_lopbicg_switching_noovlp(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
 
+/*
 #ifdef DISPLAY_ERROR
-    MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, r, A_info.recvcounts, A_info.displs, MPI_DOUBLE, MPI_COMM_WORLD);
+    //MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, r, A_info.recvcounts, A_info.displs, MPI_DOUBLE, MPI_COMM_WORLD);
     if (myid == 0) {
         printf("seed(0:seed, 1:shift), sigma, relative error\n");
     }
-/*
+
     for (int i = 0; i < sigma_len; i++) {
         MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, &x_loc_set[i * vec_loc_size], x, r_loc);
         my_daxpy(vec_loc_size, sigma[i], &x_loc_set[i * vec_loc_size], r_loc);
@@ -185,8 +186,9 @@ int main(int argc, char *argv[]) {
             else if (i % 10 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
         }
     }
-*/
+
 #endif
+*/
 
 #ifdef SOLVE_EACH_SIGMA
     for (int i = 0; i < sigma_len; i++) {

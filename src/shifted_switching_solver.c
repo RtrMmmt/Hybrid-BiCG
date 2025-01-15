@@ -3,7 +3,7 @@
 #define IDX(set, i, rows) ((set) + (i) * (rows))
 
 #define EPS 1.0e-12   // 収束判定条件 
-#define MAX_ITER 10 // 最大反復回数 
+#define MAX_ITER 1000 // 最大反復回数 
 
 #define MEASURE_TIME // 時間計測 
 //#define MEASURE_SECTION_TIME // セクション時間計測
@@ -13,6 +13,8 @@
 //#define DISPLAY_RESIDUAL // 途中の残差表示 
 //#define DISPLAY_SIGMA_RESIDUAL // 途中のsigma毎の残差表示 
 #define OUT_ITER 1     // 残差の表示間隔 
+
+#define DISPLAY_ERROR
 
 
 int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix *A_info, double *x_loc_set, double *r_loc, double *sigma, int sigma_len, int seed) {
@@ -439,6 +441,17 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); // Falseで初期化 
 
+#ifdef DISPLAY_ERROR
+    double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));   
+    double *temp    = (double *)malloc(vec_loc_size * sizeof(double));
+    for (i = 0; i < vec_loc_size; i++) {
+        temp[i] = 1.0;
+    }
+    MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, temp, vec, ans_loc);
+    my_daxpy(vec_loc_size, sigma[seed], temp, ans_loc);
+    free(temp);
+#endif
+
 #ifdef MEASURE_SECTION_TIME
         double seed_time, shift_time, switch_time;
         double section_start_time, section_end_time;
@@ -831,6 +844,36 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         printf("Switch time  : %e [sec.]\n", switch_time);
 #endif
     }
+
+#ifdef DISPLAY_ERROR
+    if (myid == 0) {
+        printf("seed(0:seed, 1:shift), sigma, relative error\n");
+    }
+
+    for (int i = 0; i < sigma_len; i++) {
+        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &x_loc_set[i * vec_loc_size], vec, r_loc);
+        my_daxpy(vec_loc_size, sigma[i], &x_loc_set[i * vec_loc_size], r_loc);
+
+        double diff;
+        double local_diff_norm_2 = 0;
+        double local_ans_norm_2 = 0;
+        for (int j = 0; j < vec_loc_size; j++) {
+            diff = r_loc[j] - ans_loc[j];
+            local_diff_norm_2 += diff * diff;
+            local_ans_norm_2 += ans_loc[j] * ans_loc[j];
+        }
+        double global_diff_norm_2, global_ans_norm_2;
+        MPI_Allreduce(&local_diff_norm_2, &global_diff_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&local_ans_norm_2, &global_ans_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+        double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
+        if (myid == 0) {
+            if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
+            else if (i % 10 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
+        }
+    }
+    free(ans_loc);
+#endif
 
     free(r_old_loc); free(r_hat_loc); free(s_loc); free(y_loc); free(q_loc_copy);
     free(vec);
