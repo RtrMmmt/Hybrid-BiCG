@@ -16,7 +16,8 @@
 
 #define DISPLAY_ERROR
 
-//#define SEED_SWITCHING
+#define SEED_SWITCHING
+#define DISPLAY_EVERY_SEED
 
 
 int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix *A_info, double *x_loc_set, double *r_loc, double *sigma, int sigma_len, int seed) {
@@ -768,6 +769,10 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             section_start_time = MPI_Wtime();
 #endif
 
+#ifdef DISPLAY_EVERY_SEED
+            if (myid == 0) printf("seed: %d\n", seed);
+#endif
+
 #ifdef SEED_SWITCHING
             // seed switching 
             if (stop_flag[seed] && stop_count < sigma_len) {
@@ -799,6 +804,9 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                     }
                 }
 
+#ifdef DISPLAY_EVERY_SEED
+                if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
+#endif
                 seed = max_sigma;
             }
 #endif
