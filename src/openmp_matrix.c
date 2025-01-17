@@ -32,7 +32,7 @@ void MPI_openmp_csr_spmv_ovlap(CSR_Matrix *matrix_loc_diag, CSR_Matrix *matrix_l
 	#pragma omp barrier
 
     openmp_mult(matrix_loc_offd, x, y_loc);
-    //#pragma omp barrier
+    #pragma omp barrier
 }
 
 /******************************************************************************
