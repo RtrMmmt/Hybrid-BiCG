@@ -448,7 +448,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #ifdef DISPLAY_ERROR
     double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));   
     double *temp    = (double *)malloc(vec_loc_size * sizeof(double));
-    for (i = 0; i < vec_loc_size; i++) {
+    for (int i = 0; i < vec_loc_size; i++) {
         temp[i] = 1.0;
     }
     MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, temp, vec, ans_loc);
