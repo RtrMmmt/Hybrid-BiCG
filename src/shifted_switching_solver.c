@@ -512,7 +512,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
-        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
+        //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
 
 /*
         #pragma omp master
@@ -531,7 +531,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         }
 */
 
-/*
         // s_locの初期化
         #pragma omp for
         for (int l = 0; l < vec_loc_size; l++) {
@@ -546,12 +545,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             {
                 MPI_Wait(&vec_req, MPI_STATUS_IGNORE);
             }
-            #pragma omp barrier
         }
+        #pragma omp barrier
 
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, s_loc);
-*/
+        #pragma omp barrier
+
 
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
@@ -579,7 +579,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dcopy(vec_loc_size, r_loc, q_loc_copy); // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
 
         // ===== y <- (A + sigma[seed] I) q =====
-        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
+        //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
 
 /*
         #pragma omp master
@@ -589,7 +589,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp barrier
 */
 
-/*
+
         #pragma omp master
         {
             MPI_Iallgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
@@ -612,7 +612,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, y_loc);
-*/
+        #pragma omp barrier
 
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
@@ -689,13 +689,11 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
-/*
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp master
         {
             MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
         }
-*/
 
         // ===== シフト方程式 =====
 
@@ -809,13 +807,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 }
                 my_dscal(vec_loc_size, 1.0 / (zeta_set[max_sigma] * pi_archive_set[max_sigma * max_iter + k]), r_loc);
 
-/*
-                double scale_factor = 1.0 / (zeta_set[max_sigma] * pi_archive_set[max_sigma * max_iter + k]);
-                for (int i = 0; i < vec_loc_size; i++) {
-                    r_loc[i] *= scale_factor;
-                }
-*/
-
                 for (j = 0; j < sigma_len; j++) {
                     eta_set[j]    = 0.0;  // eta[sigma]    <- 0 
                     //pi_archive_set[j * max_iter + 0] = 1.0;
@@ -833,14 +824,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                         zeta_set[j] = (1.0 - omega_seed_archive[i] * (sigma[max_sigma] - sigma[j])) * zeta_set[j];
                     }
                 }
-
-/*
-                for (j = 0; j < sigma_len; j++) {
-                    if (stop_flag[j]) continue;
-                    if (j == max_sigma) continue;
-                    if (myid == 0) printf("sigma[%d] eta: %f, pi: %f, zeta: %f\n", j, eta_set[j], pi_archive_set[j * max_iter + k], zeta_set[j]);
-                }
-*/
 
 #ifdef DISPLAY_EVERY_SEED
                 if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
