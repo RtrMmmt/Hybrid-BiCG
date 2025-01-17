@@ -790,7 +790,12 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                     beta_seed_archive[i] = (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * beta_seed_archive[i];
                     omega_seed_archive[i] = omega_seed_archive[i] / (1.0 - omega_seed_archive[i] * (sigma[seed] - sigma[max_sigma]));
                 }
-                my_dscal(vec_loc_size, 1.0 / (zeta_set[max_sigma] * pi_archive_set[max_sigma * max_iter + k]), r_loc);
+                //my_dscal(vec_loc_size, 1.0 / (zeta_set[max_sigma] * pi_archive_set[max_sigma * max_iter + k]), r_loc);
+
+                double scale_factor = 1.0 / (zeta_set[max_sigma] * pi_archive_set[max_sigma * max_iter + k]);
+                for (int i = 0; i < vec_loc_size; i++) {
+                    r_loc[i] *= scale_factor;
+                }
 
                 for (j = 0; j < sigma_len; j++) {
                     eta_set[j]    = 0.0;  // eta[sigma]    <- 0 
