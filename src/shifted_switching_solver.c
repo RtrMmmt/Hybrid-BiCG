@@ -718,7 +718,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
         // ==== 収束判定 ====
 
-        #pragma omp master
+        //#pragma omp master
+        #pragma omp single
         {
 
 #ifdef DISPLAY_SIGMA_RESIDUAL
@@ -764,6 +765,10 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #ifdef DISPLAY_SIGMA_RESIDUAL
             if (myid == 0 && k % OUT_ITER == 0) printf("\n");
 #endif
+        }
+
+        #pragma omp single
+        {
 
 #ifdef MEASURE_SECTION_TIME
             section_start_time = MPI_Wtime();
@@ -816,7 +821,10 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             section_end_time = MPI_Wtime();
             switch_time += section_end_time - section_start_time;
 #endif
+        }
 
+        #pragma omp single
+        {
             k++;
 
 #ifdef DISPLAY_RESIDUAL
@@ -882,7 +890,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
         if (myid == 0) {
             if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
-            else if (i % 100 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
+            else if (i % 10 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
         }
     }
     free(ans_loc);
