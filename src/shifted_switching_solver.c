@@ -536,6 +536,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         for (int l = 0; l < vec_loc_size; l++) {
             s_loc[l] = 0.0;
         }
+        #pragma omp barrier
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
 
@@ -600,6 +601,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         for (int l = 0; l < vec_loc_size; l++) {
             y_loc[l] = 0.0;
         }
+        #pragma omp barrier
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, r_loc, y_loc);
 
