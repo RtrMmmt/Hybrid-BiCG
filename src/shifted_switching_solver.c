@@ -391,7 +391,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     int vec_size = A_info->rows;
     int vec_loc_size = A_loc_diag->rows;
 
-    int i, j;
+    //int i, j;
+    int j;
 
     int k, max_iter, stop_count;
     double tol;
@@ -492,7 +493,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         if (myid == 0) printf("Seed : %d\n", seed);
 #endif
 
-#pragma omp parallel private(i, j)  // スレッドの生成
+#pragma omp parallel private(j)  // スレッドの生成
 {
     double local_dot_r, local_dot_zero, local_rTr, local_rTs, local_qTq, local_qTy, local_rTr_old;
 
@@ -784,7 +785,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #ifdef DISPLAY_SIGMA_RESIDUAL
                 if (myid == 0) printf("Seed : %d\n", max_sigma);
 #endif
-                for (i = 1; i <= k; i++) {
+                for (int i = 1; i <= k; i++) {
                     alpha_seed_archive[i] = (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * alpha_seed_archive[i];
                     beta_seed_archive[i] = (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * beta_seed_archive[i];
                     omega_seed_archive[i] = omega_seed_archive[i] / (1.0 - omega_seed_archive[i] * (sigma[seed] - sigma[max_sigma]));
@@ -799,7 +800,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 //alpha_seed_archive[0] = 1.0;
                 //beta_seed_archive[0]  = 0.0;
 
-                for (i = 1; i <= k; i++) {
+                for (int i = 1; i <= k; i++) {
                     for (j = 0; j < sigma_len; j++) {
                         if (stop_flag[j]) continue;
                         if (j == max_sigma) continue;
