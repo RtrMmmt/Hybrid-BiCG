@@ -512,13 +512,15 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
-        //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
+        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
 
+/*
         #pragma omp master
         {
             MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
         }
         #pragma omp barrier
+*/
 
 /*
         if (k != 0) {
@@ -577,13 +579,15 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dcopy(vec_loc_size, r_loc, q_loc_copy); // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
 
         // ===== y <- (A + sigma[seed] I) q =====
-        //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
+        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
 
+/*
         #pragma omp master
         {
             MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
         }
         #pragma omp barrier
+*/
 
 /*
         #pragma omp master
@@ -832,11 +836,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                     }
                 }
 
+/*
                 for (j = 0; j < sigma_len; j++) {
                     if (stop_flag[j]) continue;
                     if (j == max_sigma) continue;
                     if (myid == 0) printf("sigma[%d] eta: %f, pi: %f, zeta: %f\n", j, eta_set[j], pi_archive_set[j * max_iter + k], zeta_set[j]);
                 }
+*/
 
 #ifdef DISPLAY_EVERY_SEED
                 if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
