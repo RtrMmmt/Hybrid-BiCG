@@ -808,7 +808,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
 #endif
                 seed = max_sigma;
-                if (myid == 0) printf("k: %d, seed: %d\n", k, seed);
+                if (myid == 0) printf("k: %d, seed: %d, remain: %d\n", k, seed, sigma_len - stop_count);
             }
 #endif
 
