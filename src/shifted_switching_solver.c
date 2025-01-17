@@ -522,14 +522,14 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp barrier
 */
 
-
+/*
         if (k != 0) {
             #pragma omp master
             {
                 MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
             }
         }
-
+*/
 
 
         // s_locの初期化
@@ -685,13 +685,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
-/*
+
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp master
         {
             MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
         }
-*/
+
 
         // ===== シフト方程式 =====
 
