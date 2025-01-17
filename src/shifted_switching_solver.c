@@ -465,7 +465,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     global_rTr = my_ddot(vec_loc_size, r_loc, r_loc);      // (r#,r) 
     MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);
     my_dcopy(vec_loc_size, r_loc, r_hat_loc);   // r# <- r = b 
-    for (i = 0; i < sigma_len; i++) {
+    for (int i = 0; i < sigma_len; i++) {
         my_dcopy(vec_loc_size, r_loc, &p_loc_set[i * vec_loc_size]);    // p[sigma] <- b 
         alpha_set[i]  = 1.0;  // alpha[sigma]  <- 1 
         beta_set[i]   = 0.0;  // beta[sigma]   <- 0 
