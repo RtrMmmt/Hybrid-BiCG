@@ -815,6 +815,12 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                     }
                 }
 
+                for (j = 0; j < sigma_len; j++) {
+                    if (stop_flag[j]) continue;
+                    if (j == max_sigma) continue;
+                    if (myid == 0) printf("sigma[%d] eta: %f, pi: %f, zeta: %f\n", j, eta_set[j], pi_archive_set[j * max_iter + k], zeta_set[j]);
+                }
+
 #ifdef DISPLAY_EVERY_SEED
                 if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
 #endif
