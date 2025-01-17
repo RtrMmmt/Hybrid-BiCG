@@ -17,7 +17,7 @@
 #define DISPLAY_ERROR
 
 #define SEED_SWITCHING
-#define DISPLAY_EVERY_SEED
+//#define DISPLAY_EVERY_SEED
 
 
 int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix *A_info, double *x_loc_set, double *r_loc, double *sigma, int sigma_len, int seed) {
@@ -808,6 +808,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
 #endif
                 seed = max_sigma;
+                printf("myid: %d, seed: %d\n", myid, seed);
             }
 #endif
 
@@ -881,7 +882,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
         if (myid == 0) {
             if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
-            else /*if (i % 10 == 0)*/ printf("1, %e, %e\n", sigma[i], rerative_error);
+            else if (i % 100 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
         }
     }
     free(ans_loc);
