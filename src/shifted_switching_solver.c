@@ -512,7 +512,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
-        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
+        //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
 
 /*
         #pragma omp master
@@ -522,16 +522,16 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp barrier
 */
 
-/*
+
         if (k != 0) {
             #pragma omp master
             {
                 MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
             }
         }
-*/
 
-/*
+
+
         // s_locの初期化
         #pragma omp for
         for (int l = 0; l < vec_loc_size; l++) {
@@ -553,7 +553,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, s_loc);
         #pragma omp barrier
-*/
+
 
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
