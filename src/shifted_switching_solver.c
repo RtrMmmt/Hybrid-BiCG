@@ -583,13 +583,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         // ===== y <- (A + sigma[seed] I) q =====
         //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
 
-        #pragma omp master
-        {
-            MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
-        }
-        #pragma omp barrier
 
-/*
         #pragma omp master
         {
             MPI_Iallgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
@@ -614,7 +608,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, y_loc);
         #pragma omp barrier
-*/
+
 
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
