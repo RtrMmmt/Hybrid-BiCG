@@ -40,7 +40,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 
     int k, max_iter, stop_count;
     double tol;
-    double abs_zeta_pi;
+    double abs_zeta_pi; // max_zeta_pi,
 
     double *r_old_loc, *r_hat_loc, *s_loc, *y_loc, *vec;
 
@@ -102,7 +102,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 
     global_dot_r = global_rTr;    // (r,r) 
     global_dot_zero = global_rTr; // (r#,r#) 
-    max_zeta_pi = 1.0;   // max(|1/(zeta pi)|) 
+    //max_zeta_pi = 1.0;   // max(|1/(zeta pi)|) 
 
 #if defined(MEASURE_TIME) || defined(MEASURE_SECTION_TIME)
     start_time = MPI_Wtime();
@@ -939,7 +939,7 @@ int shifted_lopbicg_matvec_ovlap(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd,
 
     int k, max_iter, stop_count;
     double tol;
-    double abs_zeta_pi;
+    double abs_zeta_pi; // max_zeta_pi,
 
     double *r_old_loc, *r_hat_loc, *s_loc, *y_loc, *vec, *q_loc_copy;
 
@@ -1003,7 +1003,7 @@ int shifted_lopbicg_matvec_ovlap(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd,
 
     global_dot_r = global_rTr;    // (r,r) 
     global_dot_zero = global_rTr; // (r#,r#) 
-    max_zeta_pi = 1.0;   // max(|1/(zeta pi)|) 
+    //max_zeta_pi = 1.0;   // max(|1/(zeta pi)|) 
 
 #if defined(MEASURE_TIME) || defined(MEASURE_SECTION_TIME)
     start_time = MPI_Wtime();
