@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 	csr_init_matrix(A_loc_diag);
     csr_init_matrix(A_loc_offd);
 
-    if (myid == 0) printf("systems: %d, first seed: %d\n", SIGMA_LENGTH, SEED);
+    if (myid == 0) printf("systems: %d, first seed: %d\n", SIGMA_LENGTH, SEED + 1);
 
     /* 行列の読み取り */
     start_time = MPI_Wtime();
