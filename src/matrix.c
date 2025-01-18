@@ -448,8 +448,8 @@ void MPI_csr_spmv_ovlap(CSR_Matrix *matrix_loc_diag, CSR_Matrix *matrix_loc_offd
  * 			Allgathervに比べて通信に時間がかかってしまうため今回は使わない(改善したい)
  ******************************************************************************/
 void MPI_csr_spmv_async(CSR_Matrix *matrix_loc_diag, CSR_Matrix *matrix_loc_offd, INFO_Matrix *matrix_info, double *x_loc, double **x_recv, double *y_loc, int numsend, int myid, int *recv_procs) {
-	int i, j, recvs_outstanding, completed, idx, recv_idx, start_idx, end_idx;
-	int row, col_idx;
+	int i, recvs_outstanding, completed, idx, recv_idx, start_idx, end_idx;
+	int row;
 	
 	MPI_Request req[numsend];
 	MPI_Status stat[numsend];

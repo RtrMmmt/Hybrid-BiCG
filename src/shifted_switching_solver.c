@@ -1337,7 +1337,7 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
 
     double *p_loc_set;
     double *alpha_set, *beta_set, *omega_set, *eta_set, *zeta_set;
-    double alpha_old, beta_old;
+    //double alpha_old, beta_old;
 
     double *alpha_seed_archive, *beta_seed_archive, *omega_seed_archive;
     double *pi_archive_set;
@@ -1345,7 +1345,7 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
     //double dot_r, dot_zero, rTr, rTs, qTq, qTy, rTr_old;
     double global_dot_r, global_dot_zero, global_rTr, global_rTs, global_qTq, global_qTy, global_rTr_old;
 
-    MPI_Request dot_r_req, rTr_req, rTs_req, qTq_req, qTy_req, vec_req;
+    MPI_Request dot_r_req, rTr_req, qTq_req, qTy_req, vec_req;
 
     bool *stop_flag;
 
@@ -1431,7 +1431,7 @@ int shifted_lopbicg_switching_noovlp(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_o
 
 #pragma omp parallel private(j)  // スレッドの生成
 {
-    double local_dot_r, local_dot_zero, local_rTr, local_rTs, local_qTq, local_qTy, local_rTr_old;
+    double local_dot_r, local_rTr, local_rTs, local_qTq, local_qTy;
 
     while (stop_count < sigma_len && k < max_iter) {
 
