@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
             threads_per_process = omp_get_num_threads();
         }
 
-        printf("MPI Process %d on Node '%s': Threads per Process = %d\n", myid, proc_name, threads_per_process);
+        printf("Threads/Proc %d\n", threads_per_process);
     }
 
     /* OpenMPスレッド数の確認 */
@@ -105,6 +105,8 @@ int main(int argc, char *argv[]) {
     CSR_Matrix *A_loc_offd = (CSR_Matrix *)malloc(sizeof(CSR_Matrix));
 	csr_init_matrix(A_loc_diag);
     csr_init_matrix(A_loc_offd);
+
+    if (myid == 0) printf("systems: %d, first seed: %d\n", SIGMA_LENGTH, SEED);
 
     /* 行列の読み取り */
     start_time = MPI_Wtime();

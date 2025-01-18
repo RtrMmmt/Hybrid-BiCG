@@ -827,7 +827,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
 #endif
                 seed = max_sigma;
-                if (myid == 0) printf("k: %d, seed: %d, remain: %d\n", k, seed, sigma_len - stop_count);
+                //if (myid == 0) printf("k: %d, seed: %d, remain: %d\n", k, seed, sigma_len - stop_count);
             }
 #endif
 
@@ -879,7 +879,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
 #ifdef DISPLAY_ERROR
     if (myid == 0) {
-        printf("seed(0:seed, 1:shift), sigma, relative error\n");
+        printf("system #, sigma, relative error\n");
     }
 
     for (int i = 0; i < sigma_len; i++) {
@@ -900,8 +900,9 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
         double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
         if (myid == 0) {
-            if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
-            else if (i % 10 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
+            //if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
+            //else /*if (i % 10 == 0)*/ printf("1, %e, %e\n", sigma[i], rerative_error);
+            printf("%d, %e, %e\n", i+1, sigma[i], rerative_error);
         }
     }
     free(ans_loc);
