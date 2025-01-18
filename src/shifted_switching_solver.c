@@ -523,7 +523,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 */
 
 
-        if (k != 0) {
+        if (k != 1) {
             #pragma omp master
             {
                 MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
@@ -537,7 +537,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         for (int l = 0; l < vec_loc_size; l++) {
             s_loc[l] = 0.0;
         }
-        #pragma omp barrier
+        //#pragma omp barrier
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
 
@@ -594,7 +594,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         for (int l = 0; l < vec_loc_size; l++) {
             y_loc[l] = 0.0;
         }
-        #pragma omp barrier
+        //#pragma omp barrier
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, r_loc, y_loc);
 
