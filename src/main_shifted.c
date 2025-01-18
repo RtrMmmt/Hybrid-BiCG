@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     */
 #endif
 
-    double start_time, end_time, total_time;
+    double start_time, end_time;
 
     char *filename = argv[1];
 

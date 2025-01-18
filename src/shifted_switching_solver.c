@@ -40,7 +40,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 
     int k, max_iter, stop_count;
     double tol;
-    double max_zeta_pi, abs_zeta_pi;
+    double abs_zeta_pi;
 
     double *r_old_loc, *r_hat_loc, *s_loc, *y_loc, *vec;
 
@@ -110,7 +110,7 @@ int shifted_lopbicg(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix 
 
 #pragma omp parallel private(j)
 {
-    double local_dot_r, local_dot_zero, local_rTr, local_rTs, local_qTq, local_qTy, local_rTr_old;
+    double local_dot_r, local_rTr, local_rTs, local_qTq, local_qTy;
 
     while (stop_count < sigma_len && k < max_iter) {
 
@@ -403,7 +403,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     double *p_loc_set;
     double *alpha_set, *beta_set, *omega_set, *eta_set, *zeta_set;
-    double alpha_old, beta_old;
+    //double alpha_old, beta_old;
 
     double *alpha_seed_archive, *beta_seed_archive, *omega_seed_archive;
     double *pi_archive_set;
@@ -411,7 +411,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     //double dot_r, dot_zero, rTr, rTs, qTq, qTy, rTr_old;
     double global_dot_r, global_dot_zero, global_rTr, global_rTs, global_qTq, global_qTy, global_rTr_old;
 
-    MPI_Request dot_r_req, rTr_req, rTs_req, qTq_req, qTy_req, vec_req;
+    MPI_Request dot_r_req, rTr_req, qTq_req, qTy_req, vec_req; // rTs_req,
 
     bool *stop_flag;
 
@@ -495,7 +495,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
 #pragma omp parallel private(j)  // スレッドの生成
 {
-    double local_dot_r, local_dot_zero, local_rTr, local_rTs, local_qTq, local_qTy, local_rTr_old;
+    double local_dot_r, local_rTr, local_rTs, local_qTq, local_qTy;
 
     while (stop_count < sigma_len && k < max_iter) {
 
@@ -939,7 +939,7 @@ int shifted_lopbicg_matvec_ovlap(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd,
 
     int k, max_iter, stop_count;
     double tol;
-    double max_zeta_pi, abs_zeta_pi;
+    double abs_zeta_pi;
 
     double *r_old_loc, *r_hat_loc, *s_loc, *y_loc, *vec, *q_loc_copy;
 
@@ -950,7 +950,7 @@ int shifted_lopbicg_matvec_ovlap(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd,
     //double dot_r, dot_zero, rTr, rTs, qTq, qTy, rTr_old;
     double global_dot_r, global_dot_zero, global_rTr, global_rTs, global_qTq, global_qTy, global_rTr_old;
 
-    MPI_Request dot_r_req, rTr_req, rTs_req, qTq_req, qTy_req, vec_req;
+    MPI_Request dot_r_req, rTr_req, qTq_req, qTy_req, vec_req; // rTs_req,
 
     bool *stop_flag;
 
@@ -1011,7 +1011,7 @@ int shifted_lopbicg_matvec_ovlap(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd,
 
 #pragma omp parallel private(j)  // スレッドの生成
 {
-    double local_dot_r, local_dot_zero, local_rTr, local_rTs, local_qTq, local_qTy, local_rTr_old;
+    double local_dot_r, local_rTr, local_rTs, local_qTq, local_qTy;
 
     while (stop_count < sigma_len && k < max_iter) {
 
