@@ -565,25 +565,20 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
         // ===== (q,q) と (q,y) の計算 =====
+/*
         local_qTq = my_openmp_ddot(vec_loc_size, r_loc, r_loc);
         #pragma omp atomic
         global_qTq += local_qTq;
         #pragma omp barrier
-/*
-        #pragma omp master
-        {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTq_req);  // (q,q) 
-        }
-*/
         local_qTy = my_openmp_ddot(vec_loc_size, r_loc, y_loc);
         #pragma omp atomic
         global_qTy += local_qTy;
+*/
+        my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_qTq);
+        my_openmp_ddot_v2(vec_loc_size, r_loc, y_loc, &global_qTy);
         #pragma omp barrier
         #pragma omp master
         {
-            //MPI_Iallreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTy_req);  // (q,y) 
-            //MPI_Wait(&qTq_req, MPI_STATUS_IGNORE);
-            //MPI_Wait(&qTy_req, MPI_STATUS_IGNORE);
             MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
             MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
         }
@@ -607,13 +602,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp atomic
         global_dot_r += local_dot_r;
         #pragma omp barrier
-/*
-        #pragma omp master
-        {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &dot_r_req);  // (r,r) 
-            global_rTr_old = global_rTr;      // r_old <- (r#,r) 
-        }
-*/
 
         // ==== (r#,r) の計算 ====
         local_rTr = my_openmp_ddot(vec_loc_size, r_hat_loc, r_loc);
@@ -627,9 +615,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp barrier
         #pragma omp master
         {
-            //MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);  // (r#,r) 
-            //MPI_Wait(&dot_r_req, MPI_STATUS_IGNORE);
-            //MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
             MPI_Allreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r,r) 
             MPI_Allreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r#,r) 
         }
@@ -645,8 +630,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dscal(vec_loc_size, beta_seed_archive[k], &p_loc_set[seed * vec_loc_size]);     // p[seed] <- r + beta[seed] p[seed] - beta[seed] omega[seed] s 
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
-
-        //my_openmp_dcopy(vec_loc_size * sigma_len, p_loc_set, p_loc_set_copy);
 
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp master
@@ -791,11 +774,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
                 for (j = 0; j < sigma_len; j++) {
                     eta_set[j]    = 0.0;  // eta[sigma]    <- 0 
-                    //pi_archive_set[j * max_iter + 0] = 1.0;
                     zeta_set[j]   = 1.0;  // zeta[sigma]   <- 1 
                 }
-                //alpha_seed_archive[0] = 1.0;
-                //beta_seed_archive[0]  = 0.0;
 
                 for (int i = 1; i <= k; i++) {
                     for (j = 0; j < sigma_len; j++) {
@@ -811,7 +791,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 if (myid == 0) printf("seed: %d -> %d\n", seed, max_sigma);
 #endif
                 seed = max_sigma;
-                //if (myid == 0) printf("k: %d, seed: %d, remain: %d\n", k, seed, sigma_len - stop_count);
                 MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
             }
 #endif
@@ -885,8 +864,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
         double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
         if (myid == 0) {
-            //if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
-            //else /*if (i % 10 == 0)*/ printf("1, %e, %e\n", sigma[i], rerative_error);
             printf("%d, %e, %e\n", i+1, sigma[i], rerative_error);
         }
     }

@@ -31,3 +31,19 @@ void my_openmp_dcopy(int n, const double *x, double *y) {
         y[i] = x[i];
     }
 }
+
+void my_openmp_ddot_v2(int n, const double *x, const double *y, double *global_dot) {
+    #pragma omp single
+    {
+        *global_dot = 0.0;
+    }
+
+    double sum = 0.0;
+    #pragma omp for
+    for (int i = 0; i < n; i++) {
+        sum += x[i] * y[i];
+    }
+
+    #pragma omp atomic
+    *global_dot += sum;
+}
