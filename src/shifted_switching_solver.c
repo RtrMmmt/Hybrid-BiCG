@@ -51,6 +51,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     double global_dot_r, global_dot_zero, global_rTr, global_rTs, global_qTq, global_qTy, global_rTr_old;
 
+    MPI_Request rTr_req;
+
     bool *stop_flag;
 
     k = 1;
@@ -66,7 +68,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     vec         = (double *)malloc(vec_size * sizeof(double));
 
-    p_loc_set   = (double *)malloc(vec_loc_size * sigma_len * sizeof(double));
+    p_loc_set   = (double *)calloc(vec_loc_size * sigma_len, sizeof(double)); // 一応ゼロで初期化(下でもOK) 
+    //p_loc_set   = (double *)malloc(vec_loc_size * sigma_len * sizeof(double));
     alpha_set   = (double *)malloc(sigma_len * sizeof(double));
     beta_set    = (double *)malloc(sigma_len * sizeof(double));
     omega_set   = (double *)malloc(sigma_len * sizeof(double));
@@ -99,9 +102,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         seed_time = 0; shift_time = 0; switch_time = 0;
 #endif
 
-    // 初期化
     global_rTr = my_ddot(vec_loc_size, r_loc, r_loc);      // (r#,r) 
-    MPI_Allreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);
     my_dcopy(vec_loc_size, r_loc, r_hat_loc);   // r# <- r = b 
     for (int i = 0; i < sigma_len; i++) {
         my_dcopy(vec_loc_size, r_loc, &p_loc_set[i * vec_loc_size]);    // p[sigma] <- b 
@@ -112,7 +114,9 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         pi_archive_set[i * max_iter + 1] = 1.0;
         zeta_set[i]   = 1.0;  // zeta[sigma]   <- 1 
     }
+    my_dcopy(vec_loc_size, r_loc, &p_loc_set[seed * vec_loc_size]);
     MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+    MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
 
     global_dot_r = global_rTr;    // (r,r) 
     global_dot_zero = global_rTr; // (r#,r#) 
@@ -123,6 +127,10 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
 #if defined(MEASURE_TIME) || defined(MEASURE_SECTION_TIME)
         start_time = MPI_Wtime();
+#endif
+
+#ifdef DISPLAY_SIGMA_RESIDUAL
+        if (myid == 0) printf("Seed : %d\n", seed);
 #endif
 
 #pragma omp parallel private(j)  // スレッドの生成
