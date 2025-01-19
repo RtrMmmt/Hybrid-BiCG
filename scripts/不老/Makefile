@@ -1,18 +1,18 @@
 # ----------------------------------------------------------------
 # environment
-CC		= mpiicc
+CC		= mpifccpx
 FC		= 
 
 # ----------------------------------------------------------------
 # options
 
-CFLAGS		= -O3 -qopenmp -xCORE-AVX512 -ipo
+CFLAGS		= -Kfast -Koptmsg=2
 FFLAGS		= 
 
 # ----------------------------------------------------------------
 # sources and objects
 
-C_SRC		= src/main_shifted.c src/shifted_switching_solver.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c
+C_SRC		= src/main.c src/solver.c src/matrix.c src/vector.c src/mmio.c
 F_SRC		= 
 
 C_OBJ		= $(C_SRC:.c=.o)
