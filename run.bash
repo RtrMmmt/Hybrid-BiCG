@@ -1,12 +1,12 @@
 #!/bin/bash
-#PJM -g "b30304"
-#PJM -L "rscgrp=ea"
-#PJM -L "node=4"
-#PJM --mpi "proc=8"
-#PJM -L "elapse=30:00"
-#PJM -o "output.out"
-#PJM -j
+#============ SBATCH Directives =======
+#SBATCH -p jha
+#SBATCH -t 0:30:0
+#SBATCH --output=output.out
+#SBATCH --error=output.out
+#SBATCH --rsc p=4:t=28:c=28
 
-export OMP_NUM_THREADS=20
-export I_MPI_PIN_DOMAIN=40
-mpiexec.hydra -n ${PJM_MPI_PROC} ./solver data/5_ss.mtx
+#============ Shell Script ============
+
+# MPIプログラムの実行
+srun ./solver data/5_ss.mtx
