@@ -47,3 +47,10 @@ void my_openmp_ddot_v2(int n, const double *x, const double *y, double *global_d
     #pragma omp atomic
     *global_dot += sum;
 }
+
+void openmp_set_vector_zero(int vec_loc_size, double *vec) {
+    #pragma omp for
+    for (int l = 0; l < vec_loc_size; l++) {
+        vec[l] = 0.0;
+    }
+}

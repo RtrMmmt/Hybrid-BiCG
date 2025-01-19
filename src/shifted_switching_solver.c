@@ -495,28 +495,15 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
 #pragma omp parallel private(j)  // スレッドの生成
 {
-    double local_dot_r, local_rTr, local_rTs, local_qTq, local_qTy;
 
     while (stop_count < sigma_len && k < max_iter) {
-
-        // ===== グローバル変数の初期化 =====
-        #pragma omp single
-        {
-            global_rTs = 0.0;
-            global_qTq = 0.0;
-            global_qTy = 0.0;
-            global_dot_r = 0.0;
-        }
 
         // ===== ベクトルのコピー =====
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
         // s_locの初期化
-        #pragma omp for
-        for (int l = 0; l < vec_loc_size; l++) {
-            s_loc[l] = 0.0;
-        }
+        openmp_set_vector_zero(vec_loc_size, s_loc);
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
         #pragma omp barrier
@@ -526,9 +513,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         // ===== rTs = (r_hat, s) =====
-        local_rTs = my_openmp_ddot(vec_loc_size, r_hat_loc, s_loc);
-        #pragma omp atomic
-        global_rTs += local_rTs;
+        my_openmp_ddot_v2(vec_loc_size, r_hat_loc, s_loc, &global_rTs);
         #pragma omp barrier
         #pragma omp master
         {
@@ -552,10 +537,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
         // s_locの初期化
-        #pragma omp for
-        for (int l = 0; l < vec_loc_size; l++) {
-            y_loc[l] = 0.0;
-        }
+        openmp_set_vector_zero(vec_loc_size, y_loc);
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, r_loc, y_loc);
         #pragma omp barrier
