@@ -52,6 +52,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     double global_dot_r, global_dot_zero, global_rTr, global_rTs, global_qTq, global_qTy, global_rTr_old;
 
+    MPI_Request rTr_req;
+
     bool *stop_flag;
 
     k = 1;
