@@ -401,7 +401,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
     double *r_old_loc, *r_hat_loc, *s_loc, *y_loc, *vec, *q_loc_copy;
 
-    double *p_loc_set;
+    double *p_loc_set, *p_loc_set_copy;
     double *alpha_set, *beta_set, *omega_set, *eta_set, *zeta_set;
     //double alpha_old, beta_old;
 
@@ -429,6 +429,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     vec         = (double *)malloc(vec_size * sizeof(double));
 
     p_loc_set   = (double *)calloc(vec_loc_size * sigma_len, sizeof(double)); // 一応ゼロで初期化(下でもOK) 
+    p_loc_set_copy = (double *)malloc(vec_loc_size * sigma_len * sizeof(double));
     //p_loc_set   = (double *)malloc(vec_loc_size * sigma_len * sizeof(double));
     alpha_set   = (double *)malloc(sigma_len * sizeof(double));
     beta_set    = (double *)malloc(sigma_len * sizeof(double));
@@ -687,13 +688,14 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
+        my_openmp_dcopy(vec_loc_size * sigma_len, p_loc_set, p_loc_set_copy);
 
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp barrier
         #pragma omp master
         {
             //MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
-            MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Allgatherv(&p_loc_set_copy[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
         #pragma omp barrier
 
