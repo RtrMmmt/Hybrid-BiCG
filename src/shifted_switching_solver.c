@@ -495,26 +495,22 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
 #pragma omp parallel private(j)  // スレッドの生成
 {
-
     while (stop_count < sigma_len && k < max_iter) {
 
         // ===== ベクトルのコピー =====
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
-        // s_locの初期化
-        openmp_set_vector_zero(vec_loc_size, s_loc);
-        // 対角ブロックとローカルベクトルの積
-        openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
+        openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
+        openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
         #pragma omp barrier
-        // 非対角ブロックと集約ベクトルの積
-        openmp_mult(A_loc_offd, vec, s_loc);
+        openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         // ===== rTs = (r_hat, s) =====
         my_openmp_ddot_v2(vec_loc_size, r_hat_loc, s_loc, &global_rTs);
-        #pragma omp barrier
+        //#pragma omp barrier
         #pragma omp master
         {
             MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
@@ -536,20 +532,17 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         {
             MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
-        // s_locの初期化
-        openmp_set_vector_zero(vec_loc_size, y_loc);
-        // 対角ブロックとローカルベクトルの積
-        openmp_mult(A_loc_diag, r_loc, y_loc);
+        openmp_set_vector_zero(vec_loc_size, y_loc);  // y_locの初期化
+        openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
         #pragma omp barrier
-        // 非対角ブロックと集約ベクトルの積
-        openmp_mult(A_loc_offd, vec, y_loc);
+        openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
         // ===== (q,q) と (q,y) の計算 =====
         my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_qTq);
         my_openmp_ddot_v2(vec_loc_size, r_loc, y_loc, &global_qTy);
-        #pragma omp barrier
+        //#pragma omp barrier
         #pragma omp master
         {
             MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
@@ -577,7 +570,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         }
         my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_dot_r);
         my_openmp_ddot_v2(vec_loc_size, r_hat_loc, r_loc, &global_rTr);
-        #pragma omp barrier
+        //#pragma omp barrier
         #pragma omp master
         {
             MPI_Allreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r,r) 
