@@ -535,7 +535,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         }
 */
 
-/*
+
         // s_locの初期化
         #pragma omp for
         for (int l = 0; l < vec_loc_size; l++) {
@@ -544,7 +544,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         //#pragma omp barrier
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
-*/
+
 /*
         // ベクトルの集約を待機
         if (k != 1) {
@@ -554,15 +554,14 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             }
         }
 */
-/*
+
         #pragma omp barrier
 
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, s_loc);
         #pragma omp barrier
-*/
 
-        //my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
+        my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         // ===== rTs = (r_hat, s) =====
         local_rTs = my_openmp_ddot(vec_loc_size, r_hat_loc, s_loc);
@@ -692,18 +691,16 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
-/*
-        my_openmp_dcopy(vec_loc_size * sigma_len, p_loc_set, p_loc_set_copy);
+        //my_openmp_dcopy(vec_loc_size * sigma_len, p_loc_set, p_loc_set_copy);
 
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp barrier
         #pragma omp master
         {
             //MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
-            MPI_Allgatherv(&p_loc_set_copy[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+            MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
         #pragma omp barrier
-*/
 
         //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
         //my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
@@ -806,15 +803,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #ifdef DISPLAY_EVERY_SEED
             if (myid == 0) printf("seed: %d\n", seed);
 #endif
-    
-        }
-        #pragma omp barrier
-
-        MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
-        my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
-
-        #pragma omp single
-        {
 
 #ifdef SEED_SWITCHING
             // seed switching 
@@ -852,6 +840,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #endif
                 seed = max_sigma;
                 //if (myid == 0) printf("k: %d, seed: %d, remain: %d\n", k, seed, sigma_len - stop_count);
+                MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
             }
 #endif
 
