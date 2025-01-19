@@ -522,14 +522,14 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp barrier
 */
 
-
+/*
         if (k != 1) {
             #pragma omp master
             {
                 MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
             }
         }
-
+*/
 
 
         // s_locの初期化
@@ -541,6 +541,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
 
+/*
         // ベクトルの集約を待機
         if (k != 1) {
             #pragma omp master
@@ -548,6 +549,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 MPI_Wait(&vec_req, MPI_STATUS_IGNORE);
             }
         }
+*/
         #pragma omp barrier
 
         // 非対角ブロックと集約ベクトルの積
@@ -685,13 +687,14 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
-/*
+
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp master
         {
-            MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
+            //MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
+            MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
-*/
+
 
         // ===== シフト方程式 =====
 
