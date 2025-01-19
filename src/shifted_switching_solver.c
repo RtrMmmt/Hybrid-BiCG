@@ -565,15 +565,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
         // ===== (q,q) と (q,y) の計算 =====
-/*
-        local_qTq = my_openmp_ddot(vec_loc_size, r_loc, r_loc);
-        #pragma omp atomic
-        global_qTq += local_qTq;
-        #pragma omp barrier
-        local_qTy = my_openmp_ddot(vec_loc_size, r_loc, y_loc);
-        #pragma omp atomic
-        global_qTy += local_qTy;
-*/
         my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_qTq);
         my_openmp_ddot_v2(vec_loc_size, r_loc, y_loc, &global_qTy);
         #pragma omp barrier
@@ -597,21 +588,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         // ==== r の更新 ====
         my_openmp_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
 
-        // ==== (r,r) の計算 ====
-        local_dot_r = my_openmp_ddot(vec_loc_size, r_loc, r_loc);
-        #pragma omp atomic
-        global_dot_r += local_dot_r;
-        #pragma omp barrier
-
-        // ==== (r#,r) の計算 ====
-        local_rTr = my_openmp_ddot(vec_loc_size, r_hat_loc, r_loc);
+        // ==== (r,r) と (r#,r) の計算 ====
         #pragma omp single
         {
             global_rTr_old = global_rTr; 
-            global_rTr = 0.0;
         }
-        #pragma omp atomic
-        global_rTr += local_rTr;
+        my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_dot_r);
+        my_openmp_ddot_v2(vec_loc_size, r_hat_loc, r_loc, &global_rTr);
         #pragma omp barrier
         #pragma omp master
         {
