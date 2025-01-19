@@ -512,56 +512,17 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
-/*
-        if (k == 1) {
-            MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
-            my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
-        }
-*/
-
-/*
-        #pragma omp master
-        {
-            MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed] 
-        }
-        #pragma omp barrier
-*/
-
-/*
-        if (k != 1) {
-            #pragma omp master
-            {
-                MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
-            }
-        }
-*/
-
-
         // s_locの初期化
         #pragma omp for
         for (int l = 0; l < vec_loc_size; l++) {
             s_loc[l] = 0.0;
         }
-        //#pragma omp barrier
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
-
-/*
-        // ベクトルの集約を待機
-        if (k != 1) {
-            #pragma omp master
-            {
-                MPI_Wait(&vec_req, MPI_STATUS_IGNORE);
-            }
-        }
-*/
-
         #pragma omp barrier
-
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, s_loc);
         #pragma omp barrier
-
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         // ===== rTs = (r_hat, s) =====
@@ -572,8 +533,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp master
         {
             MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
-            //MPI_Iallreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTs_req);  // rTs <- (r#,s) 
-            //MPI_Wait(&rTs_req, MPI_STATUS_IGNORE);
         }
         #pragma omp barrier
 
@@ -588,35 +547,21 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_dcopy(vec_loc_size, r_loc, q_loc_copy); // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
 
         // ===== y <- (A + sigma[seed] I) q =====
-        //MPI_openmp_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
-
-
         #pragma omp master
         {
-            MPI_Iallgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
+            MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
-
         // s_locの初期化
         #pragma omp for
         for (int l = 0; l < vec_loc_size; l++) {
             y_loc[l] = 0.0;
         }
-        //#pragma omp barrier
         // 対角ブロックとローカルベクトルの積
         openmp_mult(A_loc_diag, r_loc, y_loc);
-
-        // ベクトルの集約を待機
-        #pragma omp master
-        {
-            MPI_Wait(&vec_req, MPI_STATUS_IGNORE);
-        }
         #pragma omp barrier
-
         // 非対角ブロックと集約ベクトルの積
         openmp_mult(A_loc_offd, vec, y_loc);
         #pragma omp barrier
-
-
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
         // ===== (q,q) と (q,y) の計算 =====
@@ -624,19 +569,23 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp atomic
         global_qTq += local_qTq;
         #pragma omp barrier
+/*
         #pragma omp master
         {
             MPI_Iallreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTq_req);  // (q,q) 
         }
+*/
         local_qTy = my_openmp_ddot(vec_loc_size, r_loc, y_loc);
         #pragma omp atomic
         global_qTy += local_qTy;
         #pragma omp barrier
         #pragma omp master
         {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTy_req);  // (q,y) 
-            MPI_Wait(&qTq_req, MPI_STATUS_IGNORE);
-            MPI_Wait(&qTy_req, MPI_STATUS_IGNORE);
+            //MPI_Iallreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &qTy_req);  // (q,y) 
+            //MPI_Wait(&qTq_req, MPI_STATUS_IGNORE);
+            //MPI_Wait(&qTy_req, MPI_STATUS_IGNORE);
+            MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
+            MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
         }
         #pragma omp barrier
 
@@ -658,16 +607,19 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp atomic
         global_dot_r += local_dot_r;
         #pragma omp barrier
+/*
         #pragma omp master
         {
             MPI_Iallreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &dot_r_req);  // (r,r) 
             global_rTr_old = global_rTr;      // r_old <- (r#,r) 
         }
+*/
 
         // ==== (r#,r) の計算 ====
         local_rTr = my_openmp_ddot(vec_loc_size, r_hat_loc, r_loc);
         #pragma omp single
         {
+            global_rTr_old = global_rTr; 
             global_rTr = 0.0;
         }
         #pragma omp atomic
@@ -675,9 +627,11 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp barrier
         #pragma omp master
         {
-            MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);  // (r#,r) 
-            MPI_Wait(&dot_r_req, MPI_STATUS_IGNORE);
-            MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
+            //MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);  // (r#,r) 
+            //MPI_Wait(&dot_r_req, MPI_STATUS_IGNORE);
+            //MPI_Wait(&rTr_req, MPI_STATUS_IGNORE);
+            MPI_Allreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r,r) 
+            MPI_Allreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r#,r) 
         }
         #pragma omp barrier
 
@@ -697,7 +651,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
         #pragma omp master
         {
-            //MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
             if (global_dot_r > tol * tol * global_dot_zero) { // seed switching を行わない場合
                 MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
             }
