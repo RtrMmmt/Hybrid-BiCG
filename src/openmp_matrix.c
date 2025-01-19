@@ -123,5 +123,4 @@ void openmp_mult(CSR_Matrix *A_loc, double *x, double *y_loc) {
 
         y_loc[i] += tempy;
     }
-    #pragma omp barrier
 }

@@ -503,9 +503,9 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
         openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
-        //#pragma omp barrier
+        #pragma omp barrier
         openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
-        //#pragma omp barrier
+        #pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         // ===== rTs = (r_hat, s) =====
@@ -533,9 +533,9 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         }
         openmp_set_vector_zero(vec_loc_size, y_loc);  // y_locの初期化
         openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
-        //#pragma omp barrier
+        #pragma omp barrier
         openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
-        //#pragma omp barrier
+        #pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
         // ===== (q,q) と (q,y) の計算 =====
