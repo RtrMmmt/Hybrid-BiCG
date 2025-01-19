@@ -154,10 +154,7 @@ int main(int argc, char *argv[]) {
 
     int total_iter;
     /* 実行 */
-    //total_iter = shifted_lopbicg(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     total_iter = shifted_lopbicg_switching(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-    //total_iter = shifted_lopbicg_matvec_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-    //total_iter = shifted_lopbicg_switching_noovlp(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
 
 /*
 #ifdef DISPLAY_ERROR
