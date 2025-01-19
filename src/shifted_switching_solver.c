@@ -689,6 +689,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
 
         // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
+        #pragma omp barrier
         #pragma omp master
         {
             //MPI_Iallgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD, &vec_req);
