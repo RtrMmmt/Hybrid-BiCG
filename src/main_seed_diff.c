@@ -1,5 +1,7 @@
 /******************************************************************************
  * macでのコンパイルと実行コマンド
+ * export LDFLAGS="-L/usr/local/opt/libomp/lib"
+ * export CPPFLAGS="-I/usr/local/opt/libomp/include"
  * mpicc -O3 src/main_seed_diff.c src/shifted_switching_solver.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
  * mpirun -np 4 ./a.out data/atmosmodd.mtx
  * 
@@ -9,12 +11,10 @@
 #include "shifted_switching_solver.h"
 
 #define DISPLAY_NODE_INFO   /* ノード数とプロセス数の表示 */
-#define DISPLAY_ERROR  /* 相対誤差の表示 */
-//#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
 
-#define MIN_SIGMA_LENGTH 512
-#define MAX_SIGMA_LENGTH 512
-#define SIGMA_LENGTH_STEP 4
+#define MIN_SIGMA_LENGTH 256
+#define MAX_SIGMA_LENGTH 1024
+#define SIGMA_LENGTH_STEP 2
 #define SEED 0
 
 int main(int argc, char *argv[]) {
@@ -75,8 +75,22 @@ int main(int argc, char *argv[]) {
             threads_per_process = omp_get_num_threads();
         }
 
-        printf("Thread: %d\n", threads_per_process);
+        printf("Threads/Proc %d\n", threads_per_process);
     }
+
+    /* OpenMPスレッド数の確認 */
+    /*
+    int threads_per_process = 0;
+
+    #pragma omp parallel
+    {
+        #pragma omp master
+        threads_per_process = omp_get_num_threads();
+    }
+
+    // 各プロセスで情報を表示
+    printf("MPI Process %d on Node '%s': Threads per Process = %d\n", myid, proc_name, threads_per_process);
+    */
 #endif
 
     double start_time, end_time, total_time;
@@ -103,17 +117,22 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    if (myid == 0) {
+        printf("\n");
+    }
+
     for (int sigma_len = MIN_SIGMA_LENGTH; sigma_len <= MAX_SIGMA_LENGTH; sigma_len *= SIGMA_LENGTH_STEP) {
 
         double sigma[sigma_len];
-        int seed = SEED;
+        int seed = sigma_len / 2 - 1;
 
         for (int i = 0; i < sigma_len; ++i) {
             //sigma[i] = (i + 1) * 0.01;
             //sigma[i] = (i + 1) * 0.1;
             //sigma[i] = 0.01;
-            sigma[i] = 0.01 + i * (0.01 / sigma_len);
+            //sigma[i] = 0.01 + i * (0.01 / sigma_len);
             //sigma[i] = i * (0.01 / sigma_len);
+            sigma[i] = (i + 1) * (0.01 / sigma_len);
         }
         double *x_loc_set, *r_loc, *x, *r;
         int vec_size = A_info.rows;
@@ -138,13 +157,18 @@ int main(int argc, char *argv[]) {
         }
 
         if (myid == 0) {
-            printf("sigma_len: %d\n", sigma_len);
+            printf("shift: %d, seed: %d\n", sigma_len, seed+1);
         }
 
         int total_iter;
         /* 実行 */
         //total_iter = shifted_lopbicg(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-        total_iter = shifted_lopbicg_matvec_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+        //total_iter = shifted_lopbicg_matvec_ovlap(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+        total_iter = shifted_lopbicg_switching(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+
+        if (myid == 0) {
+            printf("\n");
+        }
 
         free(x_loc_set); free(r_loc); free(x); free(r);
     }
