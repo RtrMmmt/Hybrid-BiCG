@@ -31,6 +31,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         exit(1);
     }
 
+    // ==== 変数の定義 ====
     int vec_size = A_info->rows;
     int vec_loc_size = A_loc_diag->rows;
 
@@ -60,6 +61,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     max_iter = MAX_ITER + 1;
     stop_count = 0;
 
+    // ==== メモリの確保 ====
     r_old_loc   = (double *)malloc(vec_loc_size * sizeof(double));
     r_hat_loc   = (double *)malloc(vec_loc_size * sizeof(double));
     s_loc       = (double *)malloc(vec_loc_size * sizeof(double));
@@ -75,7 +77,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     omega_set   = (double *)malloc(sigma_len * sizeof(double));
     eta_set     = (double *)malloc(sigma_len * sizeof(double));
     zeta_set    = (double *)malloc(sigma_len * sizeof(double));
-
 
     // seed switching で使うので履歴を保存する 
     alpha_seed_archive  = (double *)malloc(max_iter * sizeof(double));
@@ -102,6 +103,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         seed_time = 0; shift_time = 0; switch_time = 0;
 #endif
 
+    // ==== 初期化 ====
     global_rTr = my_ddot(vec_loc_size, r_loc, r_loc);      // (r#,r) 
     MPI_Iallreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, &rTr_req);
     my_dcopy(vec_loc_size, r_loc, r_hat_loc);   // r# <- r = b 
@@ -133,6 +135,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         if (myid == 0) printf("Seed : %d\n", seed);
 #endif
 
+    // ==== 反復計算 ====
 #pragma omp parallel private(j)  // スレッドの生成
 {
     while (stop_count < sigma_len && k < max_iter) {
@@ -226,15 +229,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 
-        // ==== 行列ベクトル積のためのベクトルqの集約を開始 ====
+        // ==== 行列ベクトル積のための通信をオーバーラップ ====
         #pragma omp master
         {
-            if (global_dot_r > tol * tol * global_dot_zero) { // seed switching を行わない場合
+            if (global_dot_r > tol * tol * global_dot_zero) { // seed switching を行わない場合 <-> seed switching を行う場合はスイッチ後に Allgatherv
                 MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
             }
         }
-
-        // ===== シフト方程式 =====
 
 #ifdef MEASURE_SECTION_TIME
         #pragma omp master
@@ -243,6 +244,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         }
 #endif
 
+        // ===== シフト方程式 =====
         #pragma omp for schedule(dynamic, 1)
         for (j = 0; j < sigma_len; j++) {
             if (j == seed) continue;
@@ -388,6 +390,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         #pragma omp barrier
     }
 }
+    // ==== 反復終了 ====
 
 #if defined(MEASURE_TIME) || defined(MEASURE_SECTION_TIME)
     end_time = MPI_Wtime();
@@ -442,8 +445,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     free(ans_loc);
 #endif
 
-    free(r_old_loc); free(r_hat_loc); free(s_loc); free(y_loc); free(q_loc_copy);
-    free(vec);
+    free(r_old_loc); free(r_hat_loc); free(s_loc); free(y_loc); free(q_loc_copy); free(vec);
     free(p_loc_set); free(alpha_set); free(beta_set); free(omega_set); free(eta_set); free(zeta_set);
     free(alpha_seed_archive); free(beta_seed_archive); free(omega_seed_archive); free(pi_archive_set);
     free(stop_flag);
