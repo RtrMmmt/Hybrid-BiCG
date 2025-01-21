@@ -8,13 +8,14 @@
 #define MEASURE_TIME // 時間計測 
 #define MEASURE_SECTION_TIME // セクション時間計測
 
-//#define DISPLAY_ERROR  // 解との相対誤差表示
-//#define DISPLAY_SECTION_TIME // 反復ごとのセクション時間表示
+//#define DISPLAY_ERROR  // 真の残差表示
+#define DISPLAY_SECTION_TIME // 反復ごとのセクション時間表示
 
 //#define DISPLAY_SIGMA_RESIDUAL // 途中のsigma毎の残差表示 
 #define OUT_ITER 1     // 残差の表示間隔 
 
 #define SEED_SWITCHING
+#define NO_OVERLAP
 
 int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix *A_info, double *x_loc_set, double *r_loc, double *sigma, int sigma_len, int seed) {
 
@@ -101,7 +102,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         double section_start_time, section_end_time;
         double seed_start_time, seed_end_time;
         double agv_start_time, agv_end_time;
-        seed_time = 0; shift_time = 0; judge_time = 0; switch_time = 0;
+        seed_time = 0; shift_time = 0; judge_time = 0; switch_time = 0, matvec_time = 0; agv_time = 0;
 #endif
 
     // ==== 初期化 ====
@@ -277,11 +278,16 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             }
         }
 
+#ifdef NO_OVERLAP
+        #pragma omp barrier
+#endif
+
 #ifdef MEASURE_SECTION_TIME
         #pragma omp master
         {
             agv_end_time = MPI_Wtime();
             agv_iter_time = agv_end_time - agv_start_time;
+            agv_time += agv_iter_time;
         }
 #endif
 
@@ -496,6 +502,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #ifdef MEASURE_SECTION_TIME
         printf("seed time       : %e [sec.]\n", seed_time);
         printf("agv+shift time  : %e [sec.]\n", shift_time);
+        printf("agv time        : %e [sec.]\n", agv_time);
         printf("judge time      : %e [sec.]\n", judge_time);
         printf("switch time     : %e [sec.]\n", switch_time);
 #endif
