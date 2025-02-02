@@ -1,16 +1,17 @@
-/******************************************************************************
+/*****************************************************************************
  * macでのコンパイルと実行コマンド
  * export LDFLAGS="-L/usr/local/opt/libomp/lib"
  * export CPPFLAGS="-I/usr/local/opt/libomp/include"
- * mpicc -O3 src/main_shifted.c src/shifted_switching_solver.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
+ * mpicc -O3 src/main.c src/solver_dynamic.c src/solver_static.c src/solver_mpi.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
+ * export OMP_NUM_THREADS=2
  * mpirun -np 4 ./a.out data/atmosmodd.mtx
- ******************************************************************************/
+ *****************************************************************************/
 
-#include "shifted_switching_solver.h"
+#include "solver.h"
 
-#define DISPLAY_NODE_INFO   /* ノード数とプロセス数の表示 */
-#define DISPLAY_ERROR  /* 相対誤差の表示 */
-//#define SOLVE_EACH_SIGMA  /* 各システムでそれぞれ反復法を適用 */
+#define DISPLAY_NODE_INFO   // ノード数とプロセス数の表示 
+//#define DISPLAY_ERROR  // 相対誤差の表示 
+//#define SOLVE_EACH_SIGMA  // 各システムでそれぞれ反復法を適用 
 
 #define SIGMA_LENGTH 512
 #define SEED 255
@@ -28,7 +29,7 @@ int main(int argc, char *argv[]) {
     MPI_Get_processor_name(proc_name, &namelen);
 
 #ifdef DISPLAY_NODE_INFO
-    /* ノード数とプロセス数をカウント */
+    // ノード数とプロセス数をカウント 
     char *all_proc_names = NULL;
     if (myid == 0) {
         all_proc_names = (char *)malloc(numprocs * MPI_MAX_PROCESSOR_NAME * sizeof(char));
@@ -77,27 +78,13 @@ int main(int argc, char *argv[]) {
 
         printf("Threads/Proc %d\n", threads_per_process);
     }
-
-    /* OpenMPスレッド数の確認 */
-    /*
-    int threads_per_process = 0;
-
-    #pragma omp parallel
-    {
-        #pragma omp master
-        threads_per_process = omp_get_num_threads();
-    }
-
-    // 各プロセスで情報を表示
-    printf("MPI Process %d on Node '%s': Threads per Process = %d\n", myid, proc_name, threads_per_process);
-    */
 #endif
 
     double start_time, end_time;
 
     char *filename = argv[1];
 
-    /* 行列の初期化 */
+    // 行列の初期化 
     INFO_Matrix A_info;
     A_info.recvcounts = (int *)malloc(numprocs * sizeof(int));
     A_info.displs = (int *)malloc(numprocs * sizeof(int));
@@ -108,7 +95,7 @@ int main(int argc, char *argv[]) {
 
     if (myid == 0) printf("systems: %d, first seed: %d\n", SIGMA_LENGTH, SEED + 1);
 
-    /* 行列の読み取り */
+    // 行列の読み取り 
     start_time = MPI_Wtime();
     MPI_csr_load_matrix_block(filename, A_loc_diag, A_loc_offd, &A_info);
     end_time = MPI_Wtime();
@@ -119,7 +106,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    /* ベクトルの初期化 */
+    // ベクトルの初期化 
     int sigma_len = SIGMA_LENGTH;
     double sigma[sigma_len];
     int seed = SEED;
@@ -138,8 +125,9 @@ int main(int argc, char *argv[]) {
     x = (double *)malloc(vec_size * sizeof(double));
     r = (double *)malloc(vec_size * sizeof(double));
 
+
     for (int i = 0; i < vec_loc_size; i++) {
-        x_loc_set[seed * vec_loc_size + i] = 1; /* 厳密解はすべて1 */
+        x_loc_set[seed * vec_loc_size + i] = 1; // 厳密解はすべて1 
     }
 
     MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, &x_loc_set[seed * vec_loc_size], x, r_loc);
@@ -148,46 +136,21 @@ int main(int argc, char *argv[]) {
     double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));
     my_dcopy(vec_loc_size, r_loc, ans_loc);
 
+/*
+    for (int i = 0; i < vec_loc_size; i++) {
+        r_loc[i] = 1; // 右辺ベクトルはすべて1
+    }
+*/
+
     for (int i = 0; i < vec_loc_size * sigma_len; i++) {
-        x_loc_set[i] = 0; /* 初期値はすべて0 */
+        x_loc_set[i] = 0; // 初期値はすべて0 
     }
 
     int total_iter;
-    /* 実行 */
-    total_iter = shifted_lopbicg_switching(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-
-/*
-#ifdef DISPLAY_ERROR
-    //MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, r, A_info.recvcounts, A_info.displs, MPI_DOUBLE, MPI_COMM_WORLD);
-    if (myid == 0) {
-        printf("seed(0:seed, 1:shift), sigma, relative error\n");
-    }
-
-    for (int i = 0; i < sigma_len; i++) {
-        MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, &x_loc_set[i * vec_loc_size], x, r_loc);
-        my_daxpy(vec_loc_size, sigma[i], &x_loc_set[i * vec_loc_size], r_loc);
-
-        double diff;
-        double local_diff_norm_2 = 0;
-        double local_ans_norm_2 = 0;
-        for (int j = 0; j < vec_loc_size; j++) {
-            diff = r_loc[j] - ans_loc[j];
-            local_diff_norm_2 += diff * diff;
-            local_ans_norm_2 += ans_loc[j] * ans_loc[j];
-        }
-        double global_diff_norm_2, global_ans_norm_2;
-        MPI_Allreduce(&local_diff_norm_2, &global_diff_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&local_ans_norm_2, &global_ans_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-        double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
-        if (myid == 0) {
-            if (i == seed) printf("0, %e, %e\n", sigma[i], rerative_error);
-            else if (i % 10 == 0) printf("1, %e, %e\n", sigma[i], rerative_error);
-        }
-    }
-
-#endif
-*/
+    // 実行 
+    //total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    total_iter = shifted_lopbicg_static(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    //total_iter = shifted_lopbicg_mpi(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
 
 #ifdef SOLVE_EACH_SIGMA
     for (int i = 0; i < sigma_len; i++) {
@@ -207,7 +170,7 @@ int main(int argc, char *argv[]) {
     free(x_loc_set); free(r_loc); free(x); free(r);
     free(A_info.recvcounts);  free(A_info.displs);
 
-    free(ans_loc);
+    //free(ans_loc);
 
 	MPI_Finalize();
 	return 0;

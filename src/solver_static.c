@@ -1,23 +1,6 @@
-#include "shifted_switching_solver.h"
+#include "solver.h"
 
-#define IDX(set, i, rows) ((set) + (i) * (rows))
-
-#define EPS 1.0e-12   // 収束判定条件 
-#define MAX_ITER 1000 // 最大反復回数 
-
-#define MEASURE_TIME // 時間計測 
-#define MEASURE_SECTION_TIME // セクション時間計測
-
-//#define DISPLAY_ERROR  // 真の残差表示
-#define DISPLAY_SECTION_TIME // 反復ごとのセクション時間表示
-
-//#define DISPLAY_SIGMA_RESIDUAL // 途中のsigma毎の残差表示 
-#define OUT_ITER 1     // 残差の表示間隔 
-
-#define SEED_SWITCHING
-#define NO_OVERLAP
-
-int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix *A_info, double *x_loc_set, double *r_loc, double *sigma, int sigma_len, int seed) {
+int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Matrix *A_info, double *x_loc_set, double *r_loc, double *sigma, int sigma_len, int seed) {
 
     int myid; MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
@@ -86,7 +69,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); // Falseで初期化 
 
 #ifdef DISPLAY_ERROR
-    double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));   
+    double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));
+
     double *temp    = (double *)malloc(vec_loc_size * sizeof(double));
     for (int i = 0; i < vec_loc_size; i++) {
         temp[i] = 1.0;
@@ -94,6 +78,12 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
     MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, temp, vec, ans_loc);
     my_daxpy(vec_loc_size, sigma[seed], temp, ans_loc);
     free(temp);
+
+/*
+    for (int i = 0; i < vec_loc_size; i++) {
+        ans_loc[i] = 1; // 右辺ベクトルはすべて1
+    }
+*/
 #endif
 
 #ifdef MEASURE_SECTION_TIME
@@ -102,7 +92,7 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         double section_start_time, section_end_time;
         double seed_start_time, seed_end_time;
         double agv_start_time, agv_end_time;
-        seed_time = 0; shift_time = 0; judge_time = 0; switch_time = 0, matvec_time = 0; agv_time = 0;
+        seed_time = 0; shift_time = 0; judge_time = 0; switch_time = 0; matvec_time = 0; agv_time = 0;
 #endif
 
     // ==== 初期化 ====
@@ -137,9 +127,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
         if (myid == 0) printf("Seed : %d\n", seed);
 #endif
 
+    double max_time;
+
     // ==== 反復計算 ====
 #pragma omp parallel private(j)  // スレッドの生成
 {
+    double local_start_time, local_end_time, local_time;
+
     while (stop_count < sigma_len && k < max_iter) {
 
 #ifdef MEASURE_SECTION_TIME
@@ -186,12 +180,13 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #endif
 
         // ===== y <- (A + sigma[seed] I) q =====
+        openmp_set_vector_zero(vec_loc_size, y_loc);  // y_locの初期化
         #pragma omp master
         {
             MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
-        openmp_set_vector_zero(vec_loc_size, y_loc);  // y_locの初期化
-        openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
+        //openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
+        openmp_mult_dynamic(A_loc_diag, r_loc, y_loc);
         #pragma omp barrier
         openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
@@ -259,7 +254,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             seed_end_time = MPI_Wtime();
             seed_iter_time = seed_end_time - seed_start_time;
             seed_time += seed_iter_time;
-            section_start_time = MPI_Wtime();
         }
 #endif
 
@@ -277,22 +271,23 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
             }
         }
-
-#ifdef NO_OVERLAP
         #pragma omp barrier
-#endif
 
 #ifdef MEASURE_SECTION_TIME
         #pragma omp master
         {
             agv_end_time = MPI_Wtime();
             agv_iter_time = agv_end_time - agv_start_time;
-            agv_time += agv_iter_time;
+            //agv_time += agv_iter_time;
+            //section_start_time = MPI_Wtime();
         }
+
+        #pragma omp barrier
+        local_start_time = MPI_Wtime();
 #endif
 
         // ===== シフト方程式 =====
-        #pragma omp for schedule(dynamic, 1)
+        #pragma omp for
         for (j = 0; j < sigma_len; j++) {
             if (j == seed) continue;
             if (stop_flag[j]) continue;
@@ -311,39 +306,21 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
             my_daxpy(vec_loc_size, 1.0 / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
         }
 
-/*
-        for (j = 0; j < sigma_len; j++) {
-            if (j == seed) continue;
-            if (stop_flag[j]) continue;
-            #pragma omp single
-            {
-                eta_set[j] = (beta_seed_archive[k - 1] / alpha_seed_archive[k - 1]) * alpha_seed_archive[k] * eta_set[j] - (sigma[seed] - sigma[j]) * alpha_seed_archive[k] * pi_archive_set[j * max_iter + (k - 1)];
-                // eta[sigma] = (beta_old / alpha_old) alpha[seed] eta[sigma] - (sigma[seed] - sigma[sigma]) alpha[seed] pi_old[sigma] 
-                pi_archive_set[j * max_iter + k] = eta_set[j] + pi_archive_set[j * max_iter + (k - 1)];    // pi_new[sigma] <- eta[sigma] + pi_old[sigma] 
-                alpha_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * alpha_seed_archive[k];     // alpha[sigma] <- (pi_old[sigma] / pi_new[sigma]) alpha[seed] 
-                omega_set[j] = omega_seed_archive[k] / (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j]));      // omega[sigma] <- omega[0] / (1.0 + omega[0] * sigma) 
-            }
-            my_openmp_daxpy(vec_loc_size, omega_set[j] / (pi_archive_set[j * max_iter + k] * zeta_set[j]), q_loc_copy, &x_loc_set[j * vec_loc_size]);     // x[sigma] <- x[sigma] + alpha[sigma] p[sigma] + omega[sigma] / (pi_new[sigma] zeta[sigma]) q 
-            my_openmp_daxpy(vec_loc_size, alpha_set[j], &p_loc_set[j * vec_loc_size], &x_loc_set[j * vec_loc_size]);
-            my_openmp_daxpy(vec_loc_size, omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_archive_set[j * max_iter + k]), q_loc_copy, &p_loc_set[j * vec_loc_size]);    // p[sigma] <- p[sigma] + omega[sigma] / (alpha[sigma] zeta[sigma]) (q / pi_new[sigma] - r_old / pi_old[sigma]) 
-            my_openmp_daxpy(vec_loc_size, -omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_archive_set[j * max_iter + (k - 1)]), r_old_loc, &p_loc_set[j * vec_loc_size]);
-            #pragma omp single
-            {
-                zeta_set[j] = (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j])) * zeta_set[j];      // zeta[sigma] <- (1.0 - omega[seed] (sigma[seed] - sigma[sigma])) * zeta[sigma] 
-                beta_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * beta_seed_archive[k]; // beta[sigma] <- (pi_old[sigma] / pi_new[sigma])^2 beta[seed] 
-            }
-            my_openmp_dscal(vec_loc_size, beta_set[j], &p_loc_set[j * vec_loc_size]);      // p[sigma] <- 1 / (pi_new[sigma] zeta[sigma]) r + beta[sigma] p[sigma] 
-            my_openmp_daxpy(vec_loc_size, 1.0 / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
-        }
-*/
-
 #ifdef MEASURE_SECTION_TIME
+        local_end_time = MPI_Wtime();
+        local_time = local_end_time - local_start_time;
+
+        #pragma omp critical
+        {
+            if (local_time > max_time) {
+                max_time = local_time;
+            }
+        }
+
         #pragma omp barrier
         #pragma omp master
         {
-            section_end_time = MPI_Wtime();
-            shift_iter_time = section_end_time - section_start_time;
-            shift_time += shift_iter_time;
+            shift_time += max_time;
         }
 #endif
 
@@ -353,10 +330,6 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 
 #ifdef DISPLAY_SIGMA_RESIDUAL
             if (myid == 0 && k % OUT_ITER == 0) printf("Iter %d : ", k);
-#endif
-
-#ifdef MEASURE_SECTION_TIME
-            section_start_time = MPI_Wtime();
 #endif
 
             max_zeta_pi = 1.0;
@@ -386,33 +359,18 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 }
             }
 
-#ifdef MEASURE_SECTION_TIME
-            section_end_time = MPI_Wtime();
-            judge_iter_time = section_end_time - section_start_time;
-            judge_time += judge_iter_time;
-#endif
-
 #ifdef DISPLAY_SIGMA_RESIDUAL
             if (myid == 0 && k % OUT_ITER == 0) printf("\n");
 #endif
 
-#ifdef DISPLAY_SECTION_TIME
-        if (myid == 0 && k == 1) {
-            printf("iter, unsolved, seed, matvec, agv+shift, agv, judge\n");
-        }
-
-        if (myid == 0 && k % OUT_ITER == 0) {
-            printf("%d, %d, %e, %e, %e, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, matvec_iter_time, shift_iter_time, agv_iter_time, judge_iter_time);
-        }
-#endif
-
 #ifdef SEED_SWITCHING
-
-#ifdef MEASURE_SECTION_TIME
-            section_start_time = MPI_Wtime();
-#endif
             // seed switching 
             if (stop_flag[seed] && stop_count < sigma_len) {
+
+#ifdef MEASURE_SECTION_TIME
+                section_start_time = MPI_Wtime();
+#endif
+
                 for (int i = 1; i <= k; i++) {
                     alpha_seed_archive[i] = (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * alpha_seed_archive[i];
                     beta_seed_archive[i] = (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * (pi_archive_set[max_sigma * max_iter + (i - 1)] / pi_archive_set[max_sigma * max_iter + i]) * beta_seed_archive[i];
@@ -436,14 +394,35 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
                 }
 
                 seed = max_sigma;
-                MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
-            }
 
 #ifdef MEASURE_SECTION_TIME
-            section_end_time = MPI_Wtime();
-            switch_time += section_end_time - section_start_time;
+                section_end_time = MPI_Wtime();
+                switch_time += section_end_time - section_start_time;
 #endif
 
+#ifdef MEASURE_SECTION_TIME
+                section_start_time = MPI_Wtime();
+#endif
+
+                MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+
+#ifdef MEASURE_SECTION_TIME
+                section_end_time = MPI_Wtime();
+                agv_iter_time += section_end_time - section_start_time;
+#endif
+            }
+#endif
+
+#ifdef DISPLAY_SECTION_TIME
+            agv_time += agv_iter_time;
+
+            if (myid == 0 && k == 1) {
+                printf("iter, unsolved, seed, matvec, agv, shift\n");
+            }
+
+            if (myid == 0 && k % OUT_ITER == 0) {
+                printf("%d, %d, %e, %e, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, matvec_iter_time, agv_iter_time, max_time);
+            }
 #endif
 
             k++;
@@ -501,9 +480,8 @@ int shifted_lopbicg_switching(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, IN
 #endif
 #ifdef MEASURE_SECTION_TIME
         printf("seed time       : %e [sec.]\n", seed_time);
-        printf("agv+shift time  : %e [sec.]\n", shift_time);
         printf("agv time        : %e [sec.]\n", agv_time);
-        printf("judge time      : %e [sec.]\n", judge_time);
+        printf("shift time      : %e [sec.]\n", shift_time);
         printf("switch time     : %e [sec.]\n", switch_time);
 #endif
     }
