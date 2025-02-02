@@ -87,12 +87,11 @@ int shifted_lopbicg_mpi(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_Mat
 #endif
 
 #ifdef MEASURE_SECTION_TIME
-        double seed_time, shift_time, judge_time, switch_time, matvec_time, agv_time;
-        double seed_iter_time, shift_iter_time, judge_iter_time, matvec_iter_time, agv_iter_time;
+        double seed_time, shift_time, switch_time;
+        double seed_iter_time, shift_iter_time, matvec_iter_time;
         double section_start_time, section_end_time;
         double seed_start_time, seed_end_time;
-        double agv_start_time, agv_end_time;
-        seed_time = 0; shift_time = 0; judge_time = 0; switch_time = 0; matvec_time = 0; agv_time = 0;
+        seed_time = 0; shift_time = 0; switch_time = 0;
 #endif
 
     // ==== 初期化 ====
@@ -405,10 +404,6 @@ while (stop_count < sigma_len && k < max_iter) {
 #if defined(MEASURE_TIME) || defined(MEASURE_SECTION_TIME)
     end_time = MPI_Wtime();
     total_time = end_time - start_time;
-#endif
-
-#ifdef MEASURE_SECTION_TIME
-    seed_time = total_time - shift_time - switch_time;
 #endif
 
 
