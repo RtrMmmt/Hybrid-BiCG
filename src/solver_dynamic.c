@@ -259,6 +259,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
         }
 
         #pragma omp barrier
+        max_time = 0.0;
         local_start_time = MPI_Wtime();
 #endif
 
