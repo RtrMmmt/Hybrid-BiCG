@@ -13,8 +13,8 @@
 //#define DISPLAY_ERROR  // 相対誤差の表示 
 //#define SOLVE_EACH_SIGMA  // 各システムでそれぞれ反復法を適用 
 
-#define SIGMA_LENGTH 512
-#define SEED 255
+#define SIGMA_LENGTH 1024
+#define SEED 511
 
 int main(int argc, char *argv[]) {
 
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     x = (double *)malloc(vec_size * sizeof(double));
     r = (double *)malloc(vec_size * sizeof(double));
 
-for (int param = 0; param < 10; param++) {
+for (int param = 0; param < 20; param++) {
 
     if (myid == 0) printf("\n");
     if (myid == 0) printf("NO: %d\n", param+1);
