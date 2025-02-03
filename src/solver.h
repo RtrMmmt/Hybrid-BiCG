@@ -15,7 +15,7 @@
 
 #define MEASURE_TIME // 時間計測 
 #define MEASURE_SECTION_TIME // セクション時間計測
-#define DISPLAY_SECTION_TIME // 反復ごとのセクション時間表示
+//#define DISPLAY_SECTION_TIME // 反復ごとのセクション時間表示
 
 //#define DISPLAY_ERROR  // 真の残差表示
 
