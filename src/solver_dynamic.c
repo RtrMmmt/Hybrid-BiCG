@@ -399,8 +399,11 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
         }
 #endif
 
-#ifdef DISPLAY_SECTION_TIME
+#ifdef MEASURE_SECTION_TIME
         shift_time += max_time;
+#endif
+
+#ifdef DISPLAY_SECTION_TIME
 
         if (myid == 0 && k == 1) {
             printf("iter, unsolved, seed, matvec, agv+shift\n");
