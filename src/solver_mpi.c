@@ -385,8 +385,11 @@ while (stop_count < sigma_len && k < max_iter) {
 
 #endif
 
-#ifdef DISPLAY_SECTION_TIME
+#ifdef MEASURE_SECTION_TIME
     shift_time += shift_iter_time;
+#endif
+
+#ifdef DISPLAY_SECTION_TIME
     
     if (myid == 0 && k == 1) {
         printf("iter, unsolved, seed, matvec, agv+shift\n");

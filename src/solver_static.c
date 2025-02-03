@@ -414,8 +414,11 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
             }
 #endif
 
-#ifdef DISPLAY_SECTION_TIME
+#ifdef MEASURE_SECTION_TIME
             agv_time += agv_iter_time;
+#endif
+
+#ifdef DISPLAY_SECTION_TIME
 
             if (myid == 0 && k == 1) {
                 printf("iter, unsolved, seed, matvec, agv, shift\n");
