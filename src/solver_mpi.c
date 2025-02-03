@@ -443,6 +443,7 @@ while (stop_count < sigma_len && k < max_iter) {
 
     if (myid == 0) {
 #ifdef MEASURE_TIME
+        printf("iterations      : %d\n", k);
         printf("avg time/iter   : %e [sec.] \n", total_time / k);
         printf("total time      : %e [sec.] \n", total_time);
 #endif

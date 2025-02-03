@@ -475,6 +475,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 
     if (myid == 0) {
 #ifdef MEASURE_TIME
+        printf("iterations      : %d\n", k);
         printf("avg time/iter   : %e [sec.] \n", total_time / k);
         printf("total time      : %e [sec.] \n", total_time);
 #endif
