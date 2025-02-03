@@ -185,8 +185,8 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
         {
             MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
-        openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
-        //openmp_mult_dynamic(A_loc_diag, r_loc, y_loc);
+        //openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
+        openmp_mult_dynamic(A_loc_diag, r_loc, y_loc);
         #pragma omp barrier
         openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
