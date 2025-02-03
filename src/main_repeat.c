@@ -127,6 +127,8 @@ int main(int argc, char *argv[]) {
 
 for (int param = 0; param < 20; param++) {
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
     if (myid == 0) printf("\n");
     if (myid == 0) printf("NO: %d\n", param+1);
 
