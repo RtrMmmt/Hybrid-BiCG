@@ -290,7 +290,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
             my_daxpy(vec_loc_size, 1.0 / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
         }
 
-        #pragma omp barrier
+        //#pragma omp barrier
 
 #ifdef MEASURE_SECTION_TIME
         local_end_time = MPI_Wtime();
