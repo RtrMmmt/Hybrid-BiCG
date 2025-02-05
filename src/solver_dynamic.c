@@ -150,7 +150,9 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
         openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
         #pragma omp master
         {
-            MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+            if (global_dot_r <= tol * tol * global_dot_zero) { // seed switching を行わない場合 <-> seed switching を行う場合はスイッチ後に Allgatherv
+                MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+            }
         }
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
         #pragma omp barrier
@@ -267,14 +269,13 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 #endif
 
         // ==== 行列ベクトル積のための通信をオーバーラップ ====
-/*
+
         #pragma omp master
         {
             if (global_dot_r > tol * tol * global_dot_zero) { // seed switching を行わない場合 <-> seed switching を行う場合はスイッチ後に Allgatherv
                 MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
             }
         }
-*/
 
         // ===== シフト方程式 =====
         #pragma omp for schedule(dynamic, 1)
