@@ -49,7 +49,7 @@ void my_openmp_ddot_v2(int n, const double *x, const double *y, double *global_d
     for (int i = 0; i < n; i++) {
         sum += x[i] * y[i];
     }
-    //#pragma omp barrier //追加
+    #pragma omp barrier //追加
 
     #pragma omp atomic
     *global_dot += sum;
