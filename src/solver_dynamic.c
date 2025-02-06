@@ -402,9 +402,9 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 #ifdef MEASURE_SECTION_TIME
             section_start_time = MPI_Wtime();
 #endif
-/*
+
             MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
-*/
+
 #ifdef MEASURE_SECTION_TIME
             section_end_time = MPI_Wtime();
             max_time += section_end_time - section_start_time;
