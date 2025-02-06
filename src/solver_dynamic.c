@@ -282,6 +282,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 */
 
         // ===== シフト方程式 =====
+/*
         #pragma omp for schedule(dynamic, 1)
         for (j = 0; j < sigma_len; j++) {
             if (j == seed) continue;
@@ -302,6 +303,32 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
         }
 
         #pragma omp barrier
+*/
+
+        for (j = 0; j < sigma_len; j++) {
+            if (j == seed) continue;
+            if (stop_flag[j]) continue;
+            #pragma omp single
+            {
+                eta_set[j] = (beta_seed_archive[k - 1] / alpha_seed_archive[k - 1]) * alpha_seed_archive[k] * eta_set[j] - (sigma[seed] - sigma[j]) * alpha_seed_archive[k] * pi_archive_set[j * max_iter + (k - 1)];
+                // eta[sigma] = (beta_old / alpha_old) alpha[seed] eta[sigma] - (sigma[seed] - sigma[sigma]) alpha[seed] pi_old[sigma] 
+                pi_archive_set[j * max_iter + k] = eta_set[j] + pi_archive_set[j * max_iter + (k - 1)];    // pi_new[sigma] <- eta[sigma] + pi_old[sigma] 
+                alpha_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * alpha_seed_archive[k];     // alpha[sigma] <- (pi_old[sigma] / pi_new[sigma]) alpha[seed] 
+                omega_set[j] = omega_seed_archive[k] / (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j]));      // omega[sigma] <- omega[0] / (1.0 + omega[0] * sigma) 
+            }
+            my_openmp_daxpy(vec_loc_size, omega_set[j] / (pi_archive_set[j * max_iter + k] * zeta_set[j]), q_loc_copy, &x_loc_set[j * vec_loc_size]);     // x[sigma] <- x[sigma] + alpha[sigma] p[sigma] + omega[sigma] / (pi_new[sigma] zeta[sigma]) q 
+            my_openmp_daxpy(vec_loc_size, alpha_set[j], &p_loc_set[j * vec_loc_size], &x_loc_set[j * vec_loc_size]);
+            my_openmp_daxpy(vec_loc_size, omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_archive_set[j * max_iter + k]), q_loc_copy, &p_loc_set[j * vec_loc_size]);    // p[sigma] <- p[sigma] + omega[sigma] / (alpha[sigma] zeta[sigma]) (q / pi_new[sigma] - r_old / pi_old[sigma]) 
+            my_openmp_daxpy(vec_loc_size, -omega_set[j] / (alpha_set[j] * zeta_set[j] * pi_archive_set[j * max_iter + (k - 1)]), r_old_loc, &p_loc_set[j * vec_loc_size]);
+            #pragma omp single
+            {
+                zeta_set[j] = (1.0 - omega_seed_archive[k] * (sigma[seed] - sigma[j])) * zeta_set[j];      // zeta[sigma] <- (1.0 - omega[seed] (sigma[seed] - sigma[sigma])) * zeta[sigma] 
+                beta_set[j] = (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * (pi_archive_set[j * max_iter + (k - 1)] / pi_archive_set[j * max_iter + k]) * beta_seed_archive[k]; // beta[sigma] <- (pi_old[sigma] / pi_new[sigma])^2 beta[seed] 
+            }
+            my_openmp_dscal(vec_loc_size, beta_set[j], &p_loc_set[j * vec_loc_size]);      // p[sigma] <- 1 / (pi_new[sigma] zeta[sigma]) r + beta[sigma] p[sigma] 
+            my_openmp_daxpy(vec_loc_size, 1.0 / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
+        }
+
 
 #ifdef MEASURE_SECTION_TIME
         local_end_time = MPI_Wtime();
