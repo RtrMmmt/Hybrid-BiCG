@@ -56,6 +56,7 @@ void openmp_mult(CSR_Matrix *A_loc, double *x, double *y_loc) {
 
         y_loc[i] += tempy;
     }
+    #pragma omp barrier //追加
 }
 
 void openmp_mult_dynamic(CSR_Matrix *A_loc, double *x, double *y_loc) {
@@ -79,5 +80,5 @@ void openmp_mult_dynamic(CSR_Matrix *A_loc, double *x, double *y_loc) {
 
         y_loc[i] += tempy;
     }
-    //#pragma omp barrier
+    #pragma omp barrier //追加
 }
