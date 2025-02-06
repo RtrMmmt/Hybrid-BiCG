@@ -163,10 +163,12 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         #pragma omp barrier
 
         // ===== alpha[seed] の更新 =====
-        #pragma omp single
+        //#pragma omp single
+        #pragma omp master
         {
             alpha_seed_archive[k] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
         }
+        #pragma omp barrier
 
         // ===== q <- r - alpha[seed] s =====
         my_openmp_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
@@ -211,10 +213,12 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         #pragma omp barrier
 
         // ===== omega[seed] の更新 =====
-        #pragma omp single
+        //#pragma omp single
+        #pragma omp master
         {
             omega_seed_archive[k] = global_qTq / global_qTy;  // omega[seed] <- (q,q)/(q,y) 
         }
+        #pragma omp barrier
 
         // ===== x[seed] の更新 =====
         my_openmp_daxpy(vec_loc_size, alpha_seed_archive[k], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     // x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q 
@@ -224,10 +228,12 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
 
         // ==== (r,r) と (r#,r) の計算 ====
-        #pragma omp single
+        //#pragma omp single
+        #pragma omp master
         {
             global_rTr_old = global_rTr; 
         }
+        #pragma omp barrier
         my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_dot_r);
         my_openmp_ddot_v2(vec_loc_size, r_hat_loc, r_loc, &global_rTr);
         #pragma omp master
@@ -238,10 +244,12 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         #pragma omp barrier
 
         // ==== beta[seed] の更新 ====
-        #pragma omp single
+        //#pragma omp single
+        #pragma omp master
         {
             beta_seed_archive[k] = (alpha_seed_archive[k] / omega_seed_archive[k]) * (global_rTr / global_rTr_old);   // beta[seed] <- (alpha[seed] / omega[seed]) ((r#,r)/(r#,r)) 
         }
+        #pragma omp barrier
 
         // ==== p[seed] の更新 ====
         my_openmp_dscal(vec_loc_size, beta_seed_archive[k], &p_loc_set[seed * vec_loc_size]);     // p[seed] <- r + beta[seed] p[seed] - beta[seed] omega[seed] s 
@@ -328,7 +336,8 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 #endif
 
         // ==== 収束判定 ====
-        #pragma omp single
+        //#pragma omp single
+        #pragma omp master
         {
 
 #ifdef DISPLAY_SIGMA_RESIDUAL
