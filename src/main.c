@@ -14,7 +14,7 @@
 //#define SOLVE_EACH_SIGMA  // 各システムでそれぞれ反復法を適用 
 
 #define SIGMA_LENGTH 512
-#define SEED 255
+#define SEED 0
 
 int main(int argc, char *argv[]) {
 
