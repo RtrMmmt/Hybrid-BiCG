@@ -36,6 +36,7 @@ void my_openmp_dcopy(int n, const double *x, double *y) {
     //#pragma omp barrier //追加
 }
 
+// atomicで実装するとバグる
 void my_openmp_ddot_v2(int n, const double *x, const double *y, double *global_dot) {
     //#pragma omp single
     #pragma omp master
