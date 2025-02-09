@@ -262,17 +262,25 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
 */
 
+        my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
+
+        openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
+        openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
+        #pragma omp barrier
+        openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
+        #pragma omp barrier
+
     #pragma omp master
     {
-        my_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
+        //my_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed]
         //MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
-        for (int l = 0; l < vec_loc_size; l++) {
-            s_loc[l] = 0.0;
-        }
-        mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
-        mult(A_loc_offd, vec, s_loc);
+        //for (int l = 0; l < vec_loc_size; l++) {
+        //    s_loc[l] = 0.0;
+        //}
+        //mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
+        //mult(A_loc_offd, vec, s_loc);
 
         my_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
         global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
