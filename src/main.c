@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     start_time = MPI_Wtime();
     MPI_csr_load_matrix_block(filename, A_loc_diag, A_loc_offd, &A_info);
     end_time = MPI_Wtime();
-    if (myid == 0) printf("IO time      : %e [sec.]\n", end_time - start_time);
+    if (myid == 0) printf("IO time         : %e [sec.]\n", end_time - start_time);
 
     if (A_info.cols != A_info.rows) {
         printf("Error: matrix is not square.\n");

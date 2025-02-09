@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     start_time = MPI_Wtime();
     MPI_csr_load_matrix_block(filename, A_loc_diag, A_loc_offd, &A_info);
     end_time = MPI_Wtime();
-    if (myid == 0) printf("IO time      : %e [sec.]\n", end_time - start_time);
+    if (myid == 0) printf("IO time         : %e [sec.]\n", end_time - start_time);
 
     if (A_info.cols != A_info.rows) {
         printf("Error: matrix is not square.\n");
@@ -144,10 +144,10 @@ for (int param = 0; param < max_param; param++) {
     int total_iter;
     // 実行 
     if (param < max_param / 2) {
-        if (myid == 0) printf("STATIC\n");
+        if (myid == 0) printf("mode            : STATIC\n");
         total_iter = shifted_lopbicg_static(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     } else {
-        if (myid == 0) printf("DYNAMIC\n");
+        if (myid == 0) printf("mode            : DYNAMIC\n");
         total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     }
 
