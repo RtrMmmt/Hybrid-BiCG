@@ -93,7 +93,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 
 #ifdef MEASURE_SECTION_TIME
         double seed_time, shift_time, switch_time, agv_time;
-        double seed_iter_time, matvec_iter_time, agv_iter_time;
+        double seed_iter_time, agv_iter_time;
         double section_start_time, section_end_time;
         double seed_start_time, seed_end_time;
         double agv_start_time, agv_end_time;
@@ -379,11 +379,11 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 #ifdef DISPLAY_SECTION_TIME
 
             if (myid == 0 && k == 1) {
-                printf("iter, unsolved, seed, matvec, agv, shift\n");
+                printf("iter, unsolved, seed, agv, shift\n");
             }
 
             if (myid == 0 && k % OUT_ITER == 0) {
-                printf("%d, %d, %e, %e, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, matvec_iter_time, agv_iter_time, max_time);
+                printf("%d, %d, %e, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, agv_iter_time, max_time);
             }
 #endif
 
@@ -400,11 +400,14 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 #endif
 
     // ==== 結果表示 ====
-
 #ifdef DISPLAY_ERROR
-    if (myid == 0) {
-        printf("system #, sigma, relative error\n");
-    }
+    //if (myid == 0) {
+    //    printf("system #, sigma, relative error\n");
+    //}
+
+    double max_relative_error = 0.0;
+    double max_sigma = 0.0;
+    int max_index = 0;
 
     for (int i = 0; i < sigma_len; i++) {
         MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &x_loc_set[i * vec_loc_size], vec, r_loc);
@@ -422,11 +425,25 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         MPI_Allreduce(&local_diff_norm_2, &global_diff_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(&local_ans_norm_2, &global_ans_norm_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        double rerative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2); //ノルムで相対誤差を計算
-        if (myid == 0) {
-            printf("%d, %e, %e\n", i+1, sigma[i], rerative_error);
+        double relative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2);
+
+        //if (myid == 0) {
+        //    printf("%d, %e, %e\n", i+1, sigma[i], relative_error);
+        //}
+
+        // 最大誤差を更新
+        if (relative_error > max_relative_error) {
+            max_relative_error = relative_error;
+            max_sigma = sigma[i];
+            max_index = i + 1;
         }
     }
+
+    // 最大誤差の結果を表示
+    if (myid == 0) {
+        printf("max error       : %e\n", max_relative_error);
+    }
+
     free(ans_loc);
 #endif
 
