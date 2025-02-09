@@ -309,6 +309,19 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         #pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
+        #pragma omp master
+        {
+            global_qTq = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
+            global_qTy = my_ddot(vec_loc_size, r_loc, y_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
+        }
+        #pragma omp barrier
+
+        #pragma omp master
+        {
+            omega_seed_archive[k] = global_qTq / global_qTy;  // omega[seed] <- (q,q)/(q,y) 
+        }
+        #pragma omp barrier
+
     #pragma omp master
     {
         //my_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
@@ -338,10 +351,10 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         //mult(A_loc_offd, vec, y_loc);
 
         //my_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
-        global_qTq = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
-        global_qTy = my_ddot(vec_loc_size, r_loc, y_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
+        //global_qTq = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
+        //global_qTy = my_ddot(vec_loc_size, r_loc, y_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
 
-        omega_seed_archive[k] = global_qTq / global_qTy;  // omega[seed] <- (q,q)/(q,y) 
+        //omega_seed_archive[k] = global_qTq / global_qTy;  // omega[seed] <- (q,q)/(q,y) 
         my_daxpy(vec_loc_size, alpha_seed_archive[k], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     // x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q 
         my_daxpy(vec_loc_size, omega_seed_archive[k], r_loc, &x_loc_set[seed * vec_loc_size]);
         my_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
