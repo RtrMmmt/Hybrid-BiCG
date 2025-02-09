@@ -13,8 +13,8 @@
 //#define DISPLAY_ERROR  // 相対誤差の表示 
 //#define SOLVE_EACH_SIGMA  // 各システムでそれぞれ反復法を適用 
 
-#define SIGMA_LENGTH 512
-#define SEED 255
+#define SIGMA_LENGTH 1024
+#define SEED 511
 
 int main(int argc, char *argv[]) {
 
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     x = (double *)malloc(vec_size * sizeof(double));
     r = (double *)malloc(vec_size * sizeof(double));
 
-    int max_param = 6;
+    int max_param = 2;
 
 for (int param = 0; param < max_param; param++) {
 
@@ -143,6 +143,7 @@ for (int param = 0; param < max_param; param++) {
 
     int total_iter;
     // 実行 
+/*
     if (param < max_param / 3) {
         if (myid == 0) printf("mode            : STATIC\n");
         total_iter = shifted_lopbicg_static(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
@@ -153,7 +154,15 @@ for (int param = 0; param < max_param; param++) {
         if (myid == 0) printf("mode            : NORMAL\n");
         total_iter = shifted_lopbicg_normal(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     }
+*/
 
+    if (param < max_param / 2) {
+        if (myid == 0) printf("mode            : STATIC\n");
+        total_iter = shifted_lopbicg_static(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    } else {
+        if (myid == 0) printf("mode            : DYNAMIC\n");
+        total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    }
 }
 
 	csr_free_matrix(A_loc_diag); free(A_loc_diag);
