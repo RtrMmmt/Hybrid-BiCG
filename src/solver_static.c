@@ -333,6 +333,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
                     omega_seed_archive[i] = omega_seed_archive[i] / (1.0 - omega_seed_archive[i] * (sigma[seed] - sigma[max_sigma]));
                 }
                 my_dscal(vec_loc_size, 1.0 / (zeta_set[max_sigma] * pi_archive_set[max_sigma * max_iter + k]), r_loc);
+                global_rTr = my_ddot(vec_loc_size, r_hat_loc, r_loc);
 
                 for (j = 0; j < sigma_len; j++) {
                     eta_set[j]    = 0.0;  // eta[sigma]    <- 0 
