@@ -406,7 +406,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
     //}
 
     double max_relative_error = 0.0;
-    double max_sigma = 0.0;
     int max_index = 0;
 
     for (int i = 0; i < sigma_len; i++) {
@@ -434,7 +433,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         // 最大誤差を更新
         if (relative_error > max_relative_error) {
             max_relative_error = relative_error;
-            max_sigma = sigma[i];
             max_index = i + 1;
         }
     }
