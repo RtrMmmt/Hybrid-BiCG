@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     x = (double *)malloc(vec_size * sizeof(double));
     r = (double *)malloc(vec_size * sizeof(double));
 
-
+/*
     for (int i = 0; i < vec_loc_size; i++) {
         x_loc_set[seed * vec_loc_size + i] = 1; // 厳密解はすべて1 
     }
@@ -135,12 +135,11 @@ int main(int argc, char *argv[]) {
 
     double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));
     my_dcopy(vec_loc_size, r_loc, ans_loc);
+*/
 
-/*
     for (int i = 0; i < vec_loc_size; i++) {
         r_loc[i] = 1; // 右辺ベクトルはすべて1
     }
-*/
 
     for (int i = 0; i < vec_loc_size * sigma_len; i++) {
         x_loc_set[i] = 0; // 初期値はすべて0 

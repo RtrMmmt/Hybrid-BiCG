@@ -73,8 +73,9 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
     stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); // Falseで初期化 
 
 #ifdef DISPLAY_ERROR
-    double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));
 
+    double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));
+/*
     double *temp    = (double *)malloc(vec_loc_size * sizeof(double));
     for (int i = 0; i < vec_loc_size; i++) {
         temp[i] = 1.0;
@@ -82,12 +83,12 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
     MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, temp, vec, ans_loc);
     my_daxpy(vec_loc_size, sigma[seed], temp, ans_loc);
     free(temp);
+*/
 
-/*
     for (int i = 0; i < vec_loc_size; i++) {
         ans_loc[i] = 1; // 右辺ベクトルはすべて1
     }
-*/
+
 #endif
 
 #ifdef MEASURE_SECTION_TIME
