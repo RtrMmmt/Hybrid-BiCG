@@ -270,6 +270,16 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
 
+        my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
+
+        // ===== rTs = (r_hat, s) =====
+        my_openmp_ddot_v2(vec_loc_size, r_hat_loc, s_loc, &global_rTs);
+        #pragma omp master
+        {
+            MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
+        }
+        #pragma omp barrier
+
     #pragma omp master
     {
         //my_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
@@ -282,9 +292,9 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         //mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);
         //mult(A_loc_offd, vec, s_loc);
 
-        my_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
-        global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
-        MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
+        //my_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
+        //global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
+        //MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
 
         alpha_seed_archive[k] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
         my_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
