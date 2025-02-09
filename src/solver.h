@@ -11,7 +11,7 @@
 #include "openmp_vector.h"
 
 #define EPS 1.0e-12   // 収束判定条件 
-#define MAX_ITER 2000 // 最大反復回数 
+#define MAX_ITER 4000 // 最大反復回数 
 
 #define MEASURE_TIME // 時間計測 
 #define MEASURE_SECTION_TIME // セクション時間計測
