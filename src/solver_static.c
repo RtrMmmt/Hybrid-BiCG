@@ -151,9 +151,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 
         openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
-        //#pragma omp barrier
         openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
-        //#pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         my_openmp_ddot_v3(vec_loc_size, r_hat_loc, s_loc, dot_temp_vec, &global_rTs);
@@ -172,11 +170,8 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         {
             MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         }
-        //openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
         openmp_mult_dynamic(A_loc_diag, r_loc, y_loc);
-        #pragma omp barrier
         openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
-        #pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
         my_openmp_ddot_v3(vec_loc_size, r_loc, r_loc, dot_temp_vec, &global_qTq);
@@ -194,7 +189,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_daxpy(vec_loc_size, omega_seed_archive[k], r_loc, &x_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
 
-        //#pragma omp barrier
         my_openmp_ddot_v3(vec_loc_size, r_loc, r_loc, dot_temp_vec, &global_dot_r);
         my_openmp_ddot_v3(vec_loc_size, r_hat_loc, r_loc, dot_temp_vec, &global_rTr);
         #pragma omp master
@@ -268,8 +262,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
             my_daxpy(vec_loc_size, 1.0 / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
         }
 
-        //#pragma omp barrier
-
 #ifdef MEASURE_SECTION_TIME
         local_end_time = MPI_Wtime();
         local_time = local_end_time - local_start_time;
@@ -289,7 +281,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 #endif
 
         // ==== 収束判定 ====
-        //#pragma omp single
         #pragma omp master
         {
 
