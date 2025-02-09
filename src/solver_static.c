@@ -32,6 +32,8 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
     double *alpha_seed_archive, *beta_seed_archive, *omega_seed_archive;
     double *pi_archive_set;
 
+    double *dot_temp_vec;
+
     double global_dot_r, global_dot_zero, global_rTr, global_rTs, global_qTq, global_qTy, global_rTr_old;
 
     MPI_Request rTr_req;
@@ -65,6 +67,8 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
     beta_seed_archive   = (double *)malloc(max_iter * sizeof(double));
     omega_seed_archive  = (double *)malloc(max_iter * sizeof(double));
     pi_archive_set      = (double *)malloc(max_iter * sigma_len * sizeof(double));
+
+    dot_temp_vec = (double *)malloc(vec_loc_size * sizeof(double));
 
     stop_flag   = (bool *)calloc(sigma_len, sizeof(bool)); // Falseで初期化 
 
@@ -272,17 +276,11 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
-        // ===== rTs = (r_hat, s) =====
-        //my_openmp_ddot_v2(vec_loc_size, r_hat_loc, s_loc, &global_rTs);
-        //#pragma omp master
-        //{
-        //    MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
-        //}
-        //#pragma omp barrier
-
+        my_openmp_ddot_v3(vec_loc_size, r_hat_loc, s_loc, dot_temp_vec, &global_rTs);
+        
         #pragma omp master
         {
-            global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
+            //global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
             MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
         }
         #pragma omp barrier
@@ -593,6 +591,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
     free(r_old_loc); free(r_hat_loc); free(s_loc); free(y_loc); free(q_loc_copy); free(vec);
     free(p_loc_set); free(alpha_set); free(beta_set); free(omega_set); free(eta_set); free(zeta_set);
     free(alpha_seed_archive); free(beta_seed_archive); free(omega_seed_archive); free(pi_archive_set);
+    free(dot_temp_vec);
     free(stop_flag);
 
     return k;

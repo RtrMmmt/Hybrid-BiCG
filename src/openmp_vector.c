@@ -56,6 +56,23 @@ void my_openmp_ddot_v2(int n, const double *x, const double *y, double *global_d
     #pragma omp barrier
 }
 
+void my_openmp_ddot_v3(int n, const double *x, const double *y, double *temp_vec, double *global_dot) {
+
+    #pragma omp for
+    for (int i = 0; i < n; i++) {
+        temp_vec[i] = x[i] * y[i];
+    }
+
+    #pragma omp master
+    {
+        *global_dot = 0.0;
+        for (int i = 0; i < n; i++) {
+            *global_dot += temp_vec[i];
+        }
+    }
+    #pragma omp barrier
+}
+
 void openmp_set_vector_zero(int vec_loc_size, double *vec) {
     #pragma omp for
     for (int l = 0; l < vec_loc_size; l++) {
