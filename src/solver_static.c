@@ -147,11 +147,19 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         // ===== r# <- (A + sigma[seed] I) p[seed] =====
+/*
         openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
         #pragma omp barrier
         openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
+*/
+        #pragma omp master
+        {
+            MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);
+        }
+        #pragma omp barrier
+
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         // ===== rTs = (r_hat, s) =====
@@ -182,6 +190,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 #endif
 
         // ===== y <- (A + sigma[seed] I) q =====
+/*
         openmp_set_vector_zero(vec_loc_size, y_loc);  // y_locの初期化
         #pragma omp master
         {
@@ -192,6 +201,13 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         #pragma omp barrier
         openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
+*/
+        #pragma omp master
+        {
+            MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);
+        }
+        #pragma omp barrier
+
         my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
 
 #ifdef MEASURE_SECTION_TIME
@@ -253,7 +269,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
             global_rTr = my_ddot(vec_loc_size, r_hat_loc, r_loc);    // (r#,r) 
         }
         #pragma omp barrier
-        
+
         #pragma omp master
         {
             MPI_Allreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r,r) 
@@ -291,6 +307,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 #endif
 
         // ==== 行列ベクトル積のための通信をオーバーラップ ====
+/*
         #pragma omp master
         {
             if (global_dot_r > tol * tol * global_dot_zero) { // seed switching を行わない場合 <-> seed switching を行う場合はスイッチ後に Allgatherv
@@ -298,6 +315,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
             }
         }
         #pragma omp barrier
+*/
 
 #ifdef MEASURE_SECTION_TIME
         #pragma omp master
@@ -434,7 +452,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
                 section_start_time = MPI_Wtime();
 #endif
 
-                MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+                //MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
 
 #ifdef MEASURE_SECTION_TIME
                 section_end_time = MPI_Wtime();
