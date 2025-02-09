@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     x = (double *)malloc(vec_size * sizeof(double));
     r = (double *)malloc(vec_size * sizeof(double));
 
-for (int param = 0; param < 10; param++) {
+for (int param = 0; param < 4; param++) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
