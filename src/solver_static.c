@@ -151,9 +151,9 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 
         openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
         openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
-        #pragma omp barrier
+        //#pragma omp barrier
         openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
-        #pragma omp barrier
+        //#pragma omp barrier
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         my_openmp_ddot_v3(vec_loc_size, r_hat_loc, s_loc, dot_temp_vec, &global_rTs);
@@ -194,7 +194,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_daxpy(vec_loc_size, omega_seed_archive[k], r_loc, &x_loc_set[seed * vec_loc_size]);
         my_openmp_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
 
-        #pragma omp barrier
+        //#pragma omp barrier
         my_openmp_ddot_v3(vec_loc_size, r_loc, r_loc, dot_temp_vec, &global_dot_r);
         my_openmp_ddot_v3(vec_loc_size, r_hat_loc, r_loc, dot_temp_vec, &global_rTr);
         #pragma omp master
@@ -268,7 +268,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
             my_daxpy(vec_loc_size, 1.0 / (pi_archive_set[j * max_iter + k] * zeta_set[j]), r_loc, &p_loc_set[j * vec_loc_size]);
         }
 
-        #pragma omp barrier
+        //#pragma omp barrier
 
 #ifdef MEASURE_SECTION_TIME
         local_end_time = MPI_Wtime();
