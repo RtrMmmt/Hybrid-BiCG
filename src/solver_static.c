@@ -273,12 +273,30 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         // ===== rTs = (r_hat, s) =====
-        my_openmp_ddot_v2(vec_loc_size, r_hat_loc, s_loc, &global_rTs);
+        //my_openmp_ddot_v2(vec_loc_size, r_hat_loc, s_loc, &global_rTs);
+        //#pragma omp master
+        //{
+        //    MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
+        //}
+        //#pragma omp barrier
+
         #pragma omp master
         {
+            my_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
+            global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
             MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
         }
         #pragma omp barrier
+
+        #pragma omp master
+        {
+            alpha_seed_archive[k] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
+        }
+        #pragma omp barrier
+
+        // ===== q <- r - alpha[seed] s =====
+        my_openmp_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
+        my_openmp_dcopy(vec_loc_size, r_loc, q_loc_copy); // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
 
     #pragma omp master
     {
@@ -296,9 +314,9 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         //global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
         //MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
 
-        alpha_seed_archive[k] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
-        my_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
-        my_dcopy(vec_loc_size, r_loc, q_loc_copy);  // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
+        //alpha_seed_archive[k] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
+        //my_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
+        //my_dcopy(vec_loc_size, r_loc, q_loc_copy);  // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
 
         //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
         MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
