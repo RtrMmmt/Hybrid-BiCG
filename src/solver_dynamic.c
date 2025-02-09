@@ -375,9 +375,9 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 
     // ==== 結果表示 ====
 #ifdef DISPLAY_ERROR
-    //if (myid == 0) {
-    //    printf("system #, sigma, relative error\n");
-    //}
+    if (myid == 0) {
+        printf("system #, sigma, relative error\n");
+    }
 
     double max_relative_error = 0.0;
     int max_index = 0;
@@ -400,9 +400,9 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 
         double relative_error = sqrt(global_diff_norm_2) / sqrt(global_ans_norm_2);
 
-        //if (myid == 0) {
-        //    printf("%d, %e, %e\n", i+1, sigma[i], relative_error);
-        //}
+        if (myid == 0) {
+            printf("%d, %e, %e\n", i+1, sigma[i], relative_error);
+        }
 
         // 最大誤差を更新
         if (relative_error > max_relative_error) {
