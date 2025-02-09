@@ -137,6 +137,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
     // ==== 反復計算 ====
 #pragma omp parallel private(j)  // スレッドの生成
 {
+
     double local_start_time, local_end_time, local_time;
 
     while (stop_count < sigma_len && k < max_iter) {
@@ -234,8 +235,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         {
             agv_end_time = MPI_Wtime();
             agv_iter_time = agv_end_time - agv_start_time;
-            //agv_time += agv_iter_time;
-            //section_start_time = MPI_Wtime();
         }
 
         #pragma omp barrier

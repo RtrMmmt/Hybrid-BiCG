@@ -125,28 +125,17 @@ int main(int argc, char *argv[]) {
     x = (double *)malloc(vec_size * sizeof(double));
     r = (double *)malloc(vec_size * sizeof(double));
 
-for (int param = 0; param < 4; param++) {
+    int max_param = 4;
+
+for (int param = 0; param < max_param; param++) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (myid == 0) printf("\n");
-    if (myid == 0) printf("NO: %d\n", param+1);
 
-    for (int i = 0; i < vec_loc_size; i++) {
-        x_loc_set[seed * vec_loc_size + i] = 1; // 厳密解はすべて1 
-    }
-
-    MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, &A_info, &x_loc_set[seed * vec_loc_size], x, r_loc);
-    my_daxpy(vec_loc_size, sigma[seed], &x_loc_set[seed * vec_loc_size], r_loc);
-
-    double *ans_loc = (double *)malloc(vec_loc_size * sizeof(double));
-    my_dcopy(vec_loc_size, r_loc, ans_loc);
-
-/*
     for (int i = 0; i < vec_loc_size; i++) {
         r_loc[i] = 1; // 右辺ベクトルはすべて1
     }
-*/
 
     for (int i = 0; i < vec_loc_size * sigma_len; i++) {
         x_loc_set[i] = 0; // 初期値はすべて0 
@@ -154,9 +143,14 @@ for (int param = 0; param < 4; param++) {
 
     int total_iter;
     // 実行 
-    //total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-    total_iter = shifted_lopbicg_static(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-    //total_iter = shifted_lopbicg_mpi(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    if (param < max_param / 2) {
+        if (myid == 0) printf("STATIC\n");
+        total_iter = shifted_lopbicg_static(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    } else {
+        if (myid == 0) printf("DYNAMIC\n");
+        total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    }
+
 }
 
 	csr_free_matrix(A_loc_diag); free(A_loc_diag);
