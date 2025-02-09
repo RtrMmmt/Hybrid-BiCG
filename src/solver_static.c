@@ -267,7 +267,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, &p_loc_set[seed * vec_loc_size], vec, s_loc);  // s <- (A + sigma[seed] I) p[seed]
-        MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+        //MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
         for (int l = 0; l < vec_loc_size; l++) {
             s_loc[l] = 0.0;
         }
@@ -324,7 +324,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
             agv_start_time = MPI_Wtime();
         }
 #endif
-/*
+
         // ==== 行列ベクトル積のための通信をオーバーラップ ====
         #pragma omp master
         {
@@ -333,7 +333,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
             }
         }
         #pragma omp barrier
-*/
 
 #ifdef MEASURE_SECTION_TIME
         #pragma omp master
@@ -470,7 +469,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
                 section_start_time = MPI_Wtime();
 #endif
 
-                //MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+                MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
 
 #ifdef MEASURE_SECTION_TIME
                 section_end_time = MPI_Wtime();
