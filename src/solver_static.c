@@ -154,20 +154,12 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         #pragma omp barrier
         openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
         #pragma omp barrier
-
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         my_openmp_ddot_v3(vec_loc_size, r_hat_loc, s_loc, dot_temp_vec, &global_rTs);
-
         #pragma omp master
         {
-            //global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
             MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
-        }
-        #pragma omp barrier
-
-        #pragma omp master
-        {
             alpha_seed_archive[k] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
         }
         #pragma omp barrier
@@ -189,47 +181,26 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 
         my_openmp_ddot_v3(vec_loc_size, r_loc, r_loc, dot_temp_vec, &global_qTq);
         my_openmp_ddot_v3(vec_loc_size, r_loc, y_loc, dot_temp_vec, &global_qTy);
-
         #pragma omp master
         {
-            //global_qTq = my_ddot(vec_loc_size, r_loc, r_loc);
-            //global_qTy = my_ddot(vec_loc_size, r_loc, y_loc);
             MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
             MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
-        }
-        #pragma omp barrier
-
-        #pragma omp master
-        {
             omega_seed_archive[k] = global_qTq / global_qTy;  // omega[seed] <- (q,q)/(q,y) 
+            global_rTr_old = global_rTr; 
         }
         #pragma omp barrier
 
         my_openmp_daxpy(vec_loc_size, alpha_seed_archive[k], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     // x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q 
         my_openmp_daxpy(vec_loc_size, omega_seed_archive[k], r_loc, &x_loc_set[seed * vec_loc_size]);
-
         my_openmp_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
 
-        #pragma omp master
-        {
-            global_rTr_old = global_rTr; 
-        }
         #pragma omp barrier
-
         my_openmp_ddot_v3(vec_loc_size, r_loc, r_loc, dot_temp_vec, &global_dot_r);
         my_openmp_ddot_v3(vec_loc_size, r_hat_loc, r_loc, dot_temp_vec, &global_rTr);
-
         #pragma omp master
         {
-            //global_dot_r = my_ddot(vec_loc_size, r_loc, r_loc);
-            //global_rTr = my_ddot(vec_loc_size, r_hat_loc, r_loc); 
             MPI_Allreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r,r) 
             MPI_Allreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r#,r) 
-        }
-        #pragma omp barrier
-
-        #pragma omp master
-        {
             beta_seed_archive[k] = (alpha_seed_archive[k] / omega_seed_archive[k]) * (global_rTr / global_rTr_old);   // beta[seed] <- (alpha[seed] / omega[seed]) ((r#,r)/(r#,r)) 
         }
         #pragma omp barrier
