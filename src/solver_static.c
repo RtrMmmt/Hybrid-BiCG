@@ -297,6 +297,18 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
         my_openmp_dcopy(vec_loc_size, r_loc, q_loc_copy); // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
 
+        openmp_set_vector_zero(vec_loc_size, y_loc);  // y_locの初期化
+        #pragma omp master
+        {
+            MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+        }
+        //openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
+        openmp_mult_dynamic(A_loc_diag, r_loc, y_loc);
+        #pragma omp barrier
+        openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
+        #pragma omp barrier
+        my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
+
     #pragma omp master
     {
         //my_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
@@ -318,14 +330,14 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         //my_dcopy(vec_loc_size, r_loc, q_loc_copy);  // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
 
         //MPI_csr_spmv_ovlap(A_loc_diag, A_loc_offd, A_info, r_loc, vec, y_loc);  // y <- (A + sigma[seed] I) q 
-        MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
-        for (int l = 0; l < vec_loc_size; l++) {
-            y_loc[l] = 0.0;
-        }
-        mult(A_loc_diag, r_loc, y_loc);
-        mult(A_loc_offd, vec, y_loc);
+        //MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
+        //for (int l = 0; l < vec_loc_size; l++) {
+        //    y_loc[l] = 0.0;
+        //}
+        //mult(A_loc_diag, r_loc, y_loc);
+        //mult(A_loc_offd, vec, y_loc);
 
-        my_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
+        //my_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
         global_qTq = my_ddot(vec_loc_size, r_loc, r_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
         global_qTy = my_ddot(vec_loc_size, r_loc, y_loc); MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
 
