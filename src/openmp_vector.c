@@ -62,6 +62,7 @@ void my_openmp_ddot_v3(int n, const double *x, const double *y, double *temp_vec
     for (int i = 0; i < n; i++) {
         temp_vec[i] = x[i] * y[i];
     }
+    #pragma omp barrier
 
     #pragma omp master
     {

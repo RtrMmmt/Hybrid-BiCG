@@ -147,125 +147,6 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         }
 #endif
 
-/*
-        // ===== ベクトルのコピー =====
-        my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
-
-        // ===== r# <- (A + sigma[seed] I) p[seed] =====
-        openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
-        openmp_mult(A_loc_diag, &p_loc_set[seed * vec_loc_size], s_loc);  // 対角ブロックとローカルベクトルの積
-        #pragma omp barrier
-        openmp_mult(A_loc_offd, vec, s_loc);  // 非対角ブロックと集約ベクトルの積
-        #pragma omp barrier
-
-        my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
-
-        // ===== rTs = (r_hat, s) =====
-        my_openmp_ddot_v2(vec_loc_size, r_hat_loc, s_loc, &global_rTs);
-        #pragma omp master
-        {
-            MPI_Allreduce(MPI_IN_PLACE, &global_rTs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // rTs <- (r#,s) 
-        }
-        #pragma omp barrier
-
-        // ===== alpha[seed] の更新 =====
-        //#pragma omp single
-        #pragma omp master
-        {
-            alpha_seed_archive[k] = global_rTr / global_rTs;   // alpha[seed] <- (r#,r)/(r#,s) 
-        }
-        #pragma omp barrier
-
-        // ===== q <- r - alpha[seed] s =====
-        my_openmp_daxpy(vec_loc_size, -alpha_seed_archive[k], s_loc, r_loc);   // q <- r - alpha[seed] s 
-        my_openmp_dcopy(vec_loc_size, r_loc, q_loc_copy); // q_copy <- q (q_copyにr_locをコピー　シード方程式を一つにまとめるため)
-
-#ifdef MEASURE_SECTION_TIME
-        #pragma omp master
-        {
-            section_start_time = MPI_Wtime();
-        }
-#endif
-
-        // ===== y <- (A + sigma[seed] I) q =====
-        openmp_set_vector_zero(vec_loc_size, y_loc);  // y_locの初期化
-        #pragma omp master
-        {
-            MPI_Allgatherv(r_loc, vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
-        }
-        //openmp_mult(A_loc_diag, r_loc, y_loc);  // 対角ブロックとローカルベクトルの積
-        openmp_mult_dynamic(A_loc_diag, r_loc, y_loc);
-        #pragma omp barrier
-        openmp_mult(A_loc_offd, vec, y_loc);  // 非対角ブロックと集約ベクトルの積
-        #pragma omp barrier
-        my_openmp_daxpy(vec_loc_size, sigma[seed], r_loc, y_loc);
-
-#ifdef MEASURE_SECTION_TIME
-        #pragma omp master
-        {
-            section_end_time = MPI_Wtime();
-            matvec_iter_time = section_end_time - section_start_time;
-        }
-#endif
-
-        // ===== (q,q) と (q,y) の計算 =====
-        my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_qTq);
-        my_openmp_ddot_v2(vec_loc_size, r_loc, y_loc, &global_qTy);
-
-        #pragma omp master
-        {
-            MPI_Allreduce(MPI_IN_PLACE, &global_qTq, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,q) 
-            MPI_Allreduce(MPI_IN_PLACE, &global_qTy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (q,y) 
-        }
-        #pragma omp barrier
-
-        // ===== omega[seed] の更新 =====
-        //#pragma omp single
-        #pragma omp master
-        {
-            omega_seed_archive[k] = global_qTq / global_qTy;  // omega[seed] <- (q,q)/(q,y) 
-        }
-        #pragma omp barrier
-
-        // ===== x[seed] の更新 =====
-        my_openmp_daxpy(vec_loc_size, alpha_seed_archive[k], &p_loc_set[seed * vec_loc_size], &x_loc_set[seed * vec_loc_size]);     // x[seed] <- x[seed] + alpha[seed] p[seed] + omega[seed] q 
-        my_openmp_daxpy(vec_loc_size, omega_seed_archive[k], r_loc, &x_loc_set[seed * vec_loc_size]);
-
-        // ==== r の更新 ====
-        my_openmp_daxpy(vec_loc_size, -omega_seed_archive[k], y_loc, r_loc);            // r <- q - omega[seed] y 
-
-        // ==== (r,r) と (r#,r) の計算 ====
-        //#pragma omp single
-        #pragma omp master
-        {
-            global_rTr_old = global_rTr; 
-        }
-        #pragma omp barrier
-
-        my_openmp_ddot_v2(vec_loc_size, r_loc, r_loc, &global_dot_r);
-        my_openmp_ddot_v2(vec_loc_size, r_hat_loc, r_loc, &global_rTr);
-
-        #pragma omp master
-        {
-            MPI_Allreduce(MPI_IN_PLACE, &global_dot_r, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r,r) 
-            MPI_Allreduce(MPI_IN_PLACE, &global_rTr, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);  // (r#,r) 
-        }
-        #pragma omp barrier
-
-        // ==== beta[seed] の更新 ====
-        //#pragma omp single
-        #pragma omp master
-        {
-            beta_seed_archive[k] = (alpha_seed_archive[k] / omega_seed_archive[k]) * (global_rTr / global_rTr_old);   // beta[seed] <- (alpha[seed] / omega[seed]) ((r#,r)/(r#,r)) 
-        }
-        #pragma omp barrier
-
-        // ==== p[seed] の更新 ====
-        my_openmp_dscal(vec_loc_size, beta_seed_archive[k], &p_loc_set[seed * vec_loc_size]);     // p[seed] <- r + beta[seed] p[seed] - beta[seed] omega[seed] s 
-        my_openmp_daxpy(vec_loc_size, 1.0, r_loc, &p_loc_set[seed * vec_loc_size]);
-        my_openmp_daxpy(vec_loc_size, -beta_seed_archive[k] * omega_seed_archive[k], s_loc, &p_loc_set[seed * vec_loc_size]);
-*/
-
         my_openmp_dcopy(vec_loc_size, r_loc, r_old_loc);       // r_old <- r 
 
         openmp_set_vector_zero(vec_loc_size, s_loc);  // s_locの初期化
@@ -277,7 +158,7 @@ int shifted_lopbicg_static(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
         my_openmp_daxpy(vec_loc_size, sigma[seed], &p_loc_set[seed * vec_loc_size], s_loc);
 
         my_openmp_ddot_v3(vec_loc_size, r_hat_loc, s_loc, dot_temp_vec, &global_rTs);
-        
+
         #pragma omp master
         {
             //global_rTs = my_ddot(vec_loc_size, r_hat_loc, s_loc);
