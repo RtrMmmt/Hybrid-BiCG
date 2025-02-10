@@ -19,7 +19,7 @@
 
 #define DISPLAY_ERROR  // 真の残差表示
 
-#define DISPLAY_SIGMA_RESIDUAL // 途中のsigma毎の残差表示 
+//#define DISPLAY_SIGMA_RESIDUAL // 途中のsigma毎の残差表示 
 #define OUT_ITER 1     // 残差の表示間隔 
 
 #define SEED_SWITCHING
