@@ -12,7 +12,7 @@ FFLAGS		=
 # ----------------------------------------------------------------
 # sources and objects
 
-C_SRC		= src/main_seed_diff.c src/solver_dynamic.c src/solver_static.c src/solver_normal.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c
+C_SRC		= src/main_repeat.c src/solver_dynamic.c src/solver_static.c src/solver_normal.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c
 F_SRC		= 
 
 C_OBJ		= $(C_SRC:.c=.o)
