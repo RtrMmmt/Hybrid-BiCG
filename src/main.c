@@ -2,7 +2,7 @@
  * macでのコンパイルと実行コマンド
  * export LDFLAGS="-L/usr/local/opt/libomp/lib"
  * export CPPFLAGS="-I/usr/local/opt/libomp/include"
- * mpicc -O3 src/main.c src/solver_dynamic.c src/solver_static.c src/solver_mpi.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
+ * mpicc -O3 src/main.c src/solver_dynamic.c src/solver_static.c src/solver_normal.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
  * export OMP_NUM_THREADS=2
  * mpirun -np 4 ./a.out data/atmosmodd.mtx
  *****************************************************************************/
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     start_time = MPI_Wtime();
     MPI_csr_load_matrix_block(filename, A_loc_diag, A_loc_offd, &A_info);
     end_time = MPI_Wtime();
-    if (myid == 0) printf("IO time         : %e [sec.]\n", end_time - start_time);
+    if (myid == 0) printf("IO time      : %e [sec.]\n", end_time - start_time);
 
     if (A_info.cols != A_info.rows) {
         printf("Error: matrix is not square.\n");

@@ -91,9 +91,10 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 
 #ifdef MEASURE_SECTION_TIME
         double seed_time, shift_time, switch_time;
-        double seed_iter_time;
+        double seed_iter_time, agv_iter_time;
         double section_start_time, section_end_time;
         double seed_start_time, seed_end_time;
+        double agv_start_time, agv_end_time;
         seed_time = 0; shift_time = 0; switch_time = 0;
 #endif
 
@@ -216,9 +217,16 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
         // ==== 行列ベクトル積のための通信をオーバーラップ ====
         #pragma omp master
         {
+#ifdef MEASURE_SECTION_TIME
+            agv_start_time = MPI_Wtime();
+#endif
             if (global_dot_r > tol * tol * global_dot_zero) { // seed switching を行わない場合 <-> seed switching を行う場合はスイッチ後に Allgatherv
                 MPI_Allgatherv(&p_loc_set[seed * vec_loc_size], vec_loc_size, MPI_DOUBLE, vec, A_info->recvcounts, A_info->displs, MPI_DOUBLE, MPI_COMM_WORLD);
             }
+#ifdef MEASURE_SECTION_TIME
+            agv_end_time = MPI_Wtime();
+            agv_iter_time = agv_end_time - agv_start_time;
+#endif
         }
 
         // ===== シフト方程式 =====
@@ -340,6 +348,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 #ifdef MEASURE_SECTION_TIME
                 section_end_time = MPI_Wtime();
                 max_time += section_end_time - section_start_time;
+                agv_iter_time += section_end_time - section_start_time;
 #endif
             }
 #endif
@@ -351,11 +360,12 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 #ifdef DISPLAY_SECTION_TIME
 
             if (myid == 0 && k == 1) {
-                printf("iter, unsolved, seed, agv+shift\n");
+                //printf("iter, unsolved, seed, agv+shift\n");
+                printf("iter, unsolved, seed, agv, agv+shift\n");
             }
 
             if (myid == 0 && k % OUT_ITER == 0) {
-                printf("%d, %d, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, max_time);
+                printf("%d, %d, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, agv_iter_time, max_time - agv_iter_time);
             }
 #endif
 
