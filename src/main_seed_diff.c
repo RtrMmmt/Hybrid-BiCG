@@ -2,9 +2,9 @@
  * macでのコンパイルと実行コマンド
  * export LDFLAGS="-L/usr/local/opt/libomp/lib"
  * export CPPFLAGS="-I/usr/local/opt/libomp/include"
- * mpicc -O3 src/main_repeat.c src/solver_dynamic.c src/solver_static.c src/solver_mpi.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
+ * mpicc -O3 src/main_seed_diff.c src/solver_dynamic.c src/solver_static.c src/solver_normal.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c -I src -lm -Xpreprocessor -fopenmp $CPPFLAGS $LDFLAGS -lomp
  * export OMP_NUM_THREADS=2
- * mpirun -np 4 ./a.out data/atmosmodd.mtx
+ * mpirun -np 2 ./a.out data/1_atmosmodl.mtx
  *****************************************************************************/
 
 #include "solver.h"
@@ -13,7 +13,7 @@
 //#define DISPLAY_ERROR  // 相対誤差の表示 
 //#define SOLVE_EACH_SIGMA  // 各システムでそれぞれ反復法を適用 
 
-#define MIN_SIGMA_LENGTH 256
+#define MIN_SIGMA_LENGTH 1
 #define MAX_SIGMA_LENGTH 1024
 #define SIGMA_LENGTH_STEP 2
 
@@ -112,10 +112,13 @@ int main(int argc, char *argv[]) {
 
 for (int sigma_len = MIN_SIGMA_LENGTH; sigma_len <= MAX_SIGMA_LENGTH; sigma_len *= SIGMA_LENGTH_STEP) {
 
+for (int solver_switch = 0; solver_switch < 2; solver_switch++) {
+
     MPI_Barrier(MPI_COMM_WORLD);
 
     double sigma[sigma_len];
     int seed = sigma_len / 2 - 1;
+    if (seed < 0) seed = 0;
 
     x_loc_set = (double *)malloc(vec_loc_size * sigma_len * sizeof(double));
 
@@ -131,15 +134,22 @@ for (int sigma_len = MIN_SIGMA_LENGTH; sigma_len <= MAX_SIGMA_LENGTH; sigma_len 
         x_loc_set[i] = 0; // 初期値はすべて0 
     }
 
-    if (myid == 0) {
+    int total_iter;
+    if (solver_switch == 0) {
         printf("\n");
+        if (myid == 0) printf("mode            : NORMAL\n");
         printf("shift: %d, seed: %d\n", sigma_len, seed+1);
+        total_iter = shifted_lopbicg_normal(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
+    } else {
+        printf("\n");
+        if (myid == 0) printf("mode            : DYNAMIC\n");
+        printf("shift: %d, seed: %d\n", sigma_len, seed+1);
+        total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     }
 
-    int total_iter;
-    total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
-
     free(x_loc_set); 
+}
+
 }
 
 	csr_free_matrix(A_loc_diag); free(A_loc_diag);
