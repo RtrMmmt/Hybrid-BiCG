@@ -223,7 +223,7 @@ int shifted_lopbicg_normal(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO_
 #endif
 
         // ===== シフト方程式 =====
-        #pragma omp for
+        #pragma omp for schedule(dynamic, 1)
         for (j = 0; j < sigma_len; j++) {
             if (j == seed) continue;
             if (stop_flag[j]) continue;
