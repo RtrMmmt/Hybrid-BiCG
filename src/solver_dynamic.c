@@ -365,7 +365,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
             }
 
             if (myid == 0 && k % OUT_ITER == 0) {
-                printf("%d, %d, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, agv_iter_time, max_time - agv_iter_time);
+                printf("%d, %d, %e, %e, %e\n", k, sigma_len - stop_count, seed_iter_time, agv_iter_time, max_time - agv_iter_time);
             }
 #endif
 
