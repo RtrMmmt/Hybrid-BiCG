@@ -136,14 +136,18 @@ for (int solver_switch = 0; solver_switch < 2; solver_switch++) {
 
     int total_iter;
     if (solver_switch == 0) {
-        printf("\n");
-        if (myid == 0) printf("mode            : NORMAL\n");
-        printf("shift: %d, seed: %d\n", sigma_len, seed+1);
+        if (myid == 0) {
+            printf("\n");
+            printf("mode            : NORMAL\n");
+            printf("shift: %d, seed: %d\n", sigma_len, seed+1);
+        }
         total_iter = shifted_lopbicg_normal(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     } else {
-        printf("\n");
-        if (myid == 0) printf("mode            : DYNAMIC\n");
-        printf("shift: %d, seed: %d\n", sigma_len, seed+1);
+        if (myid == 0) {
+            printf("\n");
+            printf("mode            : DYNAMIC\n");
+            printf("shift: %d, seed: %d\n", sigma_len, seed+1);
+        }
         total_iter = shifted_lopbicg_dynamic(A_loc_diag, A_loc_offd, &A_info, x_loc_set, r_loc, sigma, sigma_len, seed);
     }
 
