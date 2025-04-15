@@ -15,9 +15,16 @@ PROFILE_DIR="./fipp_out"
 rm -rf $PROFILE_DIR
 
 # fipp 実行：Elapsed Time + CPUパフォーマンス + MPIコストを測定
-fipp -C -d $PROFILE_DIR \
-    -Icpupa,mpi \
-    -Hmode=all \
-    -Sregion \
-    -Wspawn \
-    mpirun ./solver data/ss.mtx
+# fipp -C -d $PROFILE_DIR \
+#    -Icpupa,mpi \
+#    -Hmode=all \
+#    -Sregion \
+#    -Wspawn \
+#    mpirun ./solver data/ss.mtx
+
+# fapp 実行：
+fapp -C -d $PROFILE_DIR \
+   -Icpupa,mpi \
+   -Hevent=pa1,mode=all \
+   -Wspawn \
+   mpirun ./solver data/ss.mtx
