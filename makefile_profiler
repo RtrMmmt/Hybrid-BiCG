@@ -6,7 +6,7 @@ FC		=
 # ----------------------------------------------------------------
 # options
 
-CFLAGS		= -Kfast -Kopenmp -Kfapp
+CFLAGS		= -Kfast -Kopenmp
 LDFLAGS     = -ffj-fjprof
 FFLAGS		= 
 
