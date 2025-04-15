@@ -1,0 +1,48 @@
+# ----------------------------------------------------------------
+# environment
+CC		= mpifccpx
+FC		= 
+
+# ----------------------------------------------------------------
+# options
+
+CFLAGS		= -Kfast -Kopenmp -Kfapp
+LDFLAGS     = -ffj-fjprof
+FFLAGS		= 
+
+# ----------------------------------------------------------------
+# sources and objects
+
+C_SRC		= src/main.c src/solver_dynamic.c src/solver_static.c src/solver_normal.c src/matrix.c src/vector.c src/mmio.c src/openmp_matrix.c src/openmp_vector.c
+F_SRC		= 
+
+C_OBJ		= $(C_SRC:.c=.o)
+F_OBJ		= $(F_SRC:.f=.o)
+
+# ----------------------------------------------------------------
+# executables
+
+EXEC		= solver
+
+all:		$(EXEC)
+
+$(EXEC):	$(C_OBJ)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(C_OBJ) -lm
+
+# ----------------------------------------------------------------
+# rules
+
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.f.o:
+	$(FC) $(FFLAGS) -c $< -o $@
+
+# ----------------------------------------------------------------
+# clean up
+
+clean:
+	/bin/rm -f $(EXEC) $(C_OBJ) $(F_OBJ)
+
+# ----------------------------------------------------------------
+# End of Makefile

@@ -133,6 +133,13 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
     double max_time;
 
     // ==== 反復計算 ====
+
+#ifdef PROFILER
+    if (myid == 0) {
+        fapp_start("lopbicg", 1.0);
+    }
+#endif
+
 #pragma omp parallel private(j)  // スレッドの生成
 {
 
@@ -374,6 +381,12 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
         #pragma omp barrier
     }
 }
+
+#ifdef PROFILER
+    if (myid == 0) {
+        fapp_stop("lopbicg", 1.0);
+    }
+#endif
     // ==== 反復終了 ====
 
 #if defined(MEASURE_TIME) || defined(MEASURE_SECTION_TIME)
