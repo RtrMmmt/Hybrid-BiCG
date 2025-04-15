@@ -136,7 +136,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 
 #ifdef PROFILER
     if (myid == 0) {
-        fapp_start("lopbicg", 1.0);
+        fipp_start();
     }
 #endif
 
@@ -384,7 +384,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 
 #ifdef PROFILER
     if (myid == 0) {
-        fapp_stop("lopbicg", 1.0);
+        fipp_stop();
     }
 #endif
     // ==== 反復終了 ====
