@@ -135,9 +135,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
     // ==== 反復計算 ====
 
 #ifdef PROFILER
-    if (myid == 0) {
-        fipp_start();
-    }
+    fipp_start();
 #endif
 
 #pragma omp parallel private(j)  // スレッドの生成
@@ -383,9 +381,7 @@ int shifted_lopbicg_dynamic(CSR_Matrix *A_loc_diag, CSR_Matrix *A_loc_offd, INFO
 }
 
 #ifdef PROFILER
-    if (myid == 0) {
-        fipp_stop();
-    }
+    fipp_stop();
 #endif
     // ==== 反復終了 ====
 
