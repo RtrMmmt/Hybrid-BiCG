@@ -9,7 +9,7 @@
 #PJM -j
 
 # プロファイラ出力ディレクトリ（必要なら変更可）
-PROFILE_DIR="./fipp_out"
+PROFILE_DIR="./pa_test"
 
 # 古い出力が残っているとエラーになるため削除（または事前に空ディレクトリにする）
 rm -rf $PROFILE_DIR
@@ -28,3 +28,5 @@ fapp -C -d $PROFILE_DIR \
    -Hevent=pa1,mode=all \
    -Wspawn \
    mpirun ./solver data/ss.mtx
+
+fapppx -A -d $PROFILE_DIR -Icpupa,mpi -tcsv -o pa_test.csv
